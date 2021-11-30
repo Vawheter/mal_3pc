@@ -1,0 +1,13 @@
+/ckb-contracts/Cargo.lock
+/ckb-contracts/build/*
+/ckb-contracts/dependencies/*
+/cli/proof_files
+/cli/setup_files
+/bench-tests/Cargo.lock
+**/target/*
+Cargo.lock
+!.gitkeep
+.cache/.cargo/*
+.cargo/config
+.DS_Store
+.vscode/

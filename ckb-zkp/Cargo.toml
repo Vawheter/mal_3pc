@@ -1,0 +1,21 @@
+[workspace]
+members = [
+    "curve",
+    "curve25519",
+    "r1cs",
+    "groth16",
+    "bulletproofs",
+    "marlin",
+    "plonk",
+    "clinkv2",
+    "asvc",
+    "spartan",
+    "libra",
+    "hyrax",
+    "plonk",
+    "gadgets",
+    "cli",
+]
+exclude = [
+    "ckb-contracts/bench-tests",
+]
