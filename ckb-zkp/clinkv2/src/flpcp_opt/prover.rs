@@ -7,7 +7,7 @@ use ark_poly::{EvaluationDomain, GeneralEvaluationDomain, Polynomial, UVPolynomi
 use ark_serialize::CanonicalSerialize;
 use ark_std::{cfg_iter, cfg_iter_mut};
 use rand::Rng;
-use rand::prelude::*;
+use ark_std::rand::RngCore;
 
 // DEV
 //use std::time::{Duration, Instant};
@@ -16,22 +16,18 @@ use rand::prelude::*;
 use rayon::prelude::*;
 
 use crate::flpcp_opt::Proof;
-// use crate::{
-//     kzg10::{Kzg10Proof, ProveAssignment, ProveKey, KZG10},
-// };
 use ark_poly_commit::kzg10::KZG10;
 
-type ProveKey<'a, E: PairingEngine> = ark_poly_commit::kzg10::Powers<'a, E>;
-type Kzg10Proof<E> = ark_poly_commit::kzg10::Proof<E>;
+pub type Kzg10ComKey<'a, E: PairingEngine> = ark_poly_commit::kzg10::Powers<'a, E>;
 
-pub fn create_bgin19_proof<E: PairingEngine, R: Rng>(
+pub fn create_bgin19_proof<E: PairingEngine, R: RngCore>(
     inputs: Vec<Vec<E::Fr>>,
-    kzg10_ck: &ProveKey<'_, E>,
+    kzg10_ck: &Kzg10ComKey<'_, E>,
     // thetas: &Vec<E::Fr>,
     // betas: &Vec<E::Fr>,
     r: E::Fr,
     rng: &mut R,
-) -> (Proof<E>) {
+) -> Proof<E> {
     
     // inputs[0], ..., inputs[5]
     let m = inputs[0].len();

@@ -1,12 +1,15 @@
 use ark_bls12_381::{Bls12_381, Fr};
 use ark_ff::{Field, One, Zero};
 use ark_ec::PairingEngine;
-use rand::prelude::*;
 use rand::Rng;
+use ark_std::test_rng;
 use std::time::{Duration, Instant};
 use crate::flpcp::{
     Proof, create_bgin19_proof, gen_vermsg, verify_bgin19_proof,
 };
+use ark_std::UniformRand;
+use ark_std::rand::RngCore;
+use ark_std::rand::rngs::StdRng;
 
 // We'll use these interfaces to construct our circuit.
 
@@ -49,14 +52,14 @@ fn bgin19_mul_flpcp_original() {
     let m:usize = 1000000;
     let M = 1000;
     let L = 1000;
-    let rng = &mut thread_rng();
+    let rng = &mut test_rng();
 
     // let (kzg10_ck, kzg10_vk) = KZG10::<Bls12_381>::trim(&pp, degree).unwrap();
-    let xis:Vec<Fr> = (0..m).map(|_| rng.gen()).collect();
-    let xi_1s:Vec<Fr> = (0..m).map(|_| rng.gen()).collect();
-    let yis:Vec<Fr> = (0..m).map(|_| rng.gen()).collect();
-    let yi_1s:Vec<Fr> = (0..m).map(|_| rng.gen()).collect();
-    let alphais:Vec<Fr> = (0..m).map(|_| rng.gen()).collect();
+    let xis:Vec<Fr> = (0..m).map(|_| Fr::rand(rng)).collect();
+    let xi_1s:Vec<Fr> = (0..m).map(|_| Fr::rand(rng)).collect();
+    let yis:Vec<Fr> = (0..m).map(|_| Fr::rand(rng)).collect();
+    let yi_1s:Vec<Fr> = (0..m).map(|_| Fr::rand(rng)).collect();
+    let alphais:Vec<Fr> = (0..m).map(|_| Fr::rand(rng)).collect();
     let zis:Vec<Fr> = (0..m).map(|i| mul_local(&xis[i], &xi_1s[i], &yis[i], &yi_1s[i], &alphais[i])).collect();
 
     let mut inputsi: Vec<Vec<Fr>> = vec![];
@@ -70,7 +73,7 @@ fn bgin19_mul_flpcp_original() {
     let mut inputsi_1: Vec<Vec<Fr>> = vec![];
     let zero = Fr::zero();
     let zeros = vec![zero; m];
-    let alphai_1s:Vec<Fr> = (0..m).map(|_| rng.gen()).collect();
+    let alphai_1s:Vec<Fr> = (0..m).map(|_| Fr::rand(rng)).collect();
     let input_alphai_1s:Vec<Fr> = (0..m).map(|i| -alphai_1s[i]).collect();
     inputsi_1.push(xis);
     inputsi_1.push(zeros.clone());
@@ -89,8 +92,8 @@ fn bgin19_mul_flpcp_original() {
     inputsi_2.push(input_alphai_2s);
     inputsi_2.push(zeros);
 
-    let thetas: Vec<Fr> = (0..L).map(|_| rng.gen()).collect();
-    let betas: Vec<Fr> = (0..M).map(|_| rng.gen()).collect();
+    let thetas: Vec<Fr> = (0..L).map(|_| Fr::rand(rng)).collect();
+    let betas: Vec<Fr> = (0..M).map(|_| Fr::rand(rng)).collect();
 
     let prove_start = Instant::now();
     let (proofi_1, proofi_2, _) = create_bgin19_proof::<Bls12_381, _>(inputsi, M, L, &thetas, &betas, rng);
@@ -110,9 +113,9 @@ fn bgin19_mul_flpcp_original() {
     let (_, _, fi_2_polys) = create_bgin19_proof::<Bls12_381, _>(inputsi_2, M, L, &thetas, &betas, rng);
     
     let min = Fr::from((M+1).next_power_of_two() as u64);
-    let mut r: Fr = rng.gen();
+    let mut r: Fr = Fr::rand(rng);
     while r <= min {
-        r = rng.gen();
+        r = Fr::rand(rng);
     }
     let verify_start = Instant::now();
     let pi_1_vermsg = gen_vermsg(proofi_1, &fi_1_polys, &betas, r, M);

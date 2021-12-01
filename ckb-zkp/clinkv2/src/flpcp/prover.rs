@@ -5,6 +5,7 @@ use ark_poly::{EvaluationDomain, GeneralEvaluationDomain, Polynomial, UVPolynomi
 use ark_serialize::CanonicalSerialize;
 use ark_std::{cfg_iter, cfg_iter_mut};
 use rand::Rng;
+use ark_std::rand::RngCore;
 use rand::prelude::*;
 
 // DEV
@@ -15,7 +16,7 @@ use rayon::prelude::*;
 
 use crate::flpcp::Proof;
 
-pub fn create_bgin19_proof<E: PairingEngine, R: Rng>(
+pub fn create_bgin19_proof<E: PairingEngine, R: RngCore>(
     inputs: Vec<Vec<E::Fr>>,
     M: usize,
     L: usize,

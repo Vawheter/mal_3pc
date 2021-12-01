@@ -7,11 +7,10 @@ use std::time::{Duration, Instant};
 use crate::flpcp_opt::{
     Proof, create_bgin19_proof, gen_vermsg, verify_bgin19_proof,
 };
-use crate::kzg10::kzg10::Error;
-use crate::kzg10::{
-    create_random_proof, verify_proof, ProveAssignment, VerifyAssignment, KZG10, UniversalParams,
-};
-
+use ark_poly::polynomial::univariate::DensePolynomial;
+use ark_poly_commit::kzg10::KZG10;
+use ark_std::UniformRand;
+use ark_std::test_rng;
 
 // We'll use these interfaces to construct our circuit.
 
@@ -47,19 +46,6 @@ fn mul_local<F: Field>(xi: &F, xi_1: &F, yi: &F, yi_1: &F, alphai: &F) -> F {
 //     // Verifier
 // }
 
-pub fn preprocess<E: PairingEngine, R: Rng> (
-    degree: usize,
-    rng: &mut R,
-) -> Result<UniversalParams<E>, Error> {
-    // let degree: usize = n.next_power_of_two();
-
-    println!("Creating KZG10 parameters...");
-    // Create parameters for our circuit
-    let kzg10_pp = KZG10::<E>::setup(degree, false, rng).unwrap();
-    Ok(kzg10_pp)
-}
-
-
 #[test]
 fn bgin19_mul_flpcp_opt() {
     use ark_serialize::*;
@@ -69,17 +55,18 @@ fn bgin19_mul_flpcp_opt() {
     // let L = 1000;
     // let M: usize = 100;
     // let L = 100;
-    let rng = &mut thread_rng();
+    let rng = &mut test_rng();
+    type KZG_Bls12_381 = KZG10<Bls12_381, DensePolynomial<Fr>>;
 
     let degree =  (m + 1).next_power_of_two();
-    let pp = preprocess::<Bls12_381, _>(degree, rng).unwrap();
-    let (kzg10_ck, kzg10_vk) = KZG10::<Bls12_381>::trim(&pp, degree).unwrap();
+    let kzg10_pp = KZG_Bls12_381::setup(degree, false, rng).unwrap();
+    let (kzg10_ck, kzg10_vk) = KZG_Bls12_381::trim(&kzg10_pp, degree).unwrap();
 
-    let xis:Vec<Fr> = (0..m).map(|_| rng.gen()).collect();
-    let xi_1s:Vec<Fr> = (0..m).map(|_| rng.gen()).collect();
-    let yis:Vec<Fr> = (0..m).map(|_| rng.gen()).collect();
-    let yi_1s:Vec<Fr> = (0..m).map(|_| rng.gen()).collect();
-    let alphais:Vec<Fr> = (0..m).map(|_| rng.gen()).collect();
+    let xis:Vec<Fr> = (0..m).map(|_| Fr::rand(rng)).collect();
+    let xi_1s:Vec<Fr> = (0..m).map(|_| Fr::rand(rng)).collect();
+    let yis:Vec<Fr> = (0..m).map(|_| Fr::rand(rng)).collect();
+    let yi_1s:Vec<Fr> = (0..m).map(|_| Fr::rand(rng)).collect();
+    let alphais:Vec<Fr> = (0..m).map(|_| Fr::rand(rng)).collect();
     let zis:Vec<Fr> = (0..m).map(|i| mul_local(&xis[i], &xi_1s[i], &yis[i], &yi_1s[i], &alphais[i])).collect();
 
     let mut inputsi: Vec<Vec<Fr>> = vec![];
@@ -93,7 +80,7 @@ fn bgin19_mul_flpcp_opt() {
     let mut inputsi_1: Vec<Vec<Fr>> = vec![];
     let zero = Fr::zero();
     let zeros = vec![zero; m];
-    let alphai_1s:Vec<Fr> = (0..m).map(|_| rng.gen()).collect();
+    let alphai_1s:Vec<Fr> = (0..m).map(|_| Fr::rand(rng)).collect();
     let input_alphai_1s:Vec<Fr> = (0..m).map(|i| -alphai_1s[i]).collect();
     inputsi_1.push(xis);
     inputsi_1.push(zeros.clone());
@@ -112,13 +99,13 @@ fn bgin19_mul_flpcp_opt() {
     inputsi_2.push(input_alphai_2s);
     inputsi_2.push(zeros);
 
-    // let thetas: Vec<Fr> = (0..L).map(|_| rng.gen()).collect();
-    // let betas: Vec<Fr> = (0..M).map(|_| rng.gen()).collect();
+    // let thetas: Vec<Fr> = (0..L).map(|_| Fr::rand(rng)).collect();
+    // let betas: Vec<Fr> = (0..M).map(|_| Fr::rand(rng)).collect();
 
     let min = Fr::from((m+1).next_power_of_two() as u64);
-    let mut r: Fr = rng.gen();
+    let mut r: Fr = Fr::rand(rng);
     while r <= min {
-        r = rng.gen();
+        r = Fr::rand(rng);
     }
 
     let prove_start = Instant::now();
@@ -139,7 +126,7 @@ fn bgin19_mul_flpcp_opt() {
 
     let verify_start = Instant::now();
     let pi_1_vermsg = gen_vermsg(&inputsi_1, r);
-    let result = verify_bgin19_proof(pi_1_vermsg, proof, &inputsi_2, r);
+    let result = verify_bgin19_proof(&kzg10_vk, pi_1_vermsg, proof, &inputsi_2, r);
     let verify_time = verify_start.elapsed();
     assert!(result);
 

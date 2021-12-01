@@ -5,9 +5,12 @@ use rand::prelude::*;
 use std::time::{Duration, Instant};
 use ark_poly::polynomial::univariate::DensePolynomial;
 use ark_poly::{EvaluationDomain, GeneralEvaluationDomain, Polynomial, UVPolynomial};
+use ark_poly_commit::kzg10::KZG10;
+use ark_std::test_rng;
+use ark_std::UniformRand;
 
 use crate::{
-    kzg10::{Kzg10Proof, ProveAssignment, ProveKey, KZG10},
+    flpcp_opt::{Kzg10Proof, Kzg10ComKey},
 };
 
 #[test]
@@ -16,14 +19,14 @@ fn test_fft() {
     let _m:usize = 100000000;
     let M = 10000;
     let L = 10000;
-    let rng = &mut thread_rng();
+    let rng = &mut test_rng();
 
     let domain: GeneralEvaluationDomain<Fr> =
         EvaluationDomain::<Fr>::new(M+1).unwrap();
 
     let mut fft_time = Duration::new(0, 0);
     for i in 0..L {
-        let points:Vec<Fr> = (0..M).map(|_| rng.gen()).collect();
+        let points:Vec<Fr> = (0..M).map(|_| Fr::rand(rng)).collect();
 
         let fft_start = Instant::now();
         let _ = domain.ifft(&points);
@@ -40,11 +43,11 @@ fn test_kzg10() {
 
     let m:usize = 1000000;
     let L = 1;
-    let rng = &mut thread_rng();
+    let rng = &mut test_rng();
 
     let degree =  (m + 1).next_power_of_two();
-    let pp = KZG10::<Bls12_381>::setup(degree, false, rng).unwrap();
-    let (kzg10_ck, _) = KZG10::<Bls12_381>::trim(&pp, degree).unwrap();
+    let pp = KZG10::<Bls12_381, DensePolynomial<Fr>>::setup(degree, false, rng).unwrap();
+    let (kzg10_ck, _) = KZG10::<Bls12_381, DensePolynomial<Fr>>::trim(&pp, degree).unwrap();
 
     let domain: GeneralEvaluationDomain<Fr> =
         EvaluationDomain::<Fr>::new(m+1).unwrap();
@@ -55,7 +58,7 @@ fn test_kzg10() {
         let r_poly = DensePolynomial::<Fr>::rand(m, rng);
         
         let kzg10_commit_start = Instant::now();
-        let (_, _) = KZG10::<Bls12_381>::commit(&kzg10_ck, &r_poly, hiding_bound, Some(rng)).unwrap();
+        let (_, _) = KZG10::<Bls12_381, DensePolynomial<Fr>>::commit(&kzg10_ck, &r_poly, hiding_bound, Some(rng)).unwrap();
         kzg10_commit_time += kzg10_commit_start.elapsed();
     }
 

@@ -19,15 +19,6 @@ use alloc::{borrow::Cow, string::String, vec::Vec};
 #[cfg(feature = "std")]
 use std::{borrow::Cow, string::String, vec::Vec};
 
-/// Clinkv2 unique r1cs.
-pub mod r1cs;
-
-/// Clinkv2-kzg10 scheme.
-pub mod kzg10;
-
-/// Clinkv2-ipa scheme.
-// pub mod ipa;
-
 pub mod bgin19;
 pub mod flpcp;
 pub mod flpcp_opt;

@@ -10,7 +10,7 @@ use rand::Rng;
 // DEV
 //use std::time::{Duration, Instant};
 use ark_poly_commit::kzg10::KZG10;
-type Kzg10VerKey<E: PairingEngine> = ark_poly_commit::kzg10::VerifierKey<E>;
+pub type Kzg10VerKey<E: PairingEngine> = ark_poly_commit::kzg10::VerifierKey<E>;
 
 #[cfg(feature = "parallel")]
 use rayon::prelude::*;
@@ -49,7 +49,7 @@ pub fn verify_bgin19_proof<E: PairingEngine>(
     let my_vermsg = gen_vermsg::<E>(inputs, r);
     let m = inputs[0].len();
 
-    assert!(KZG10::<E, DensePolynomial<E::Fr>>::check(&kzg10_vk, &proof.q_comm, r, &proof.q_r_value).unwrap());
+    assert!(KZG10::<E, DensePolynomial<E::Fr>>::check(&kzg10_vk, &proof.q_comm, r, proof.q_r_value, &proof.q_r_proof).unwrap());
 
     let domain: GeneralEvaluationDomain<E::Fr> =
         EvaluationDomain::<E::Fr>::new(m+1).unwrap();

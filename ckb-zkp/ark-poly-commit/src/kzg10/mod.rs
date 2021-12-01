@@ -449,6 +449,37 @@ fn convert_to_bigints<F: PrimeField>(p: &[F]) -> Vec<F::BigInt> {
     coeffs
 }
 
+impl<E: PairingEngine, P: UVPolynomial<E::Fr>> KZG10<E, P> {
+    /// Specializes the public parameters for a given maximum degree `d` for polynomials
+    /// `d` should be less that `pp.max_degree()`.
+    pub fn trim(
+        pp: &UniversalParams<E>,
+        mut supported_degree: usize,
+    ) -> Result<(Powers<E>, VerifierKey<E>), Error> {
+        if supported_degree == 1 {
+            supported_degree += 1;
+        }
+        let powers_of_g = pp.powers_of_g[..=supported_degree].to_vec();
+        let powers_of_gamma_g = (0..=supported_degree)
+            .map(|i| pp.powers_of_gamma_g[&i])
+            .collect();
+
+        let powers = Powers {
+            powers_of_g: ark_std::borrow::Cow::Owned(powers_of_g),
+            powers_of_gamma_g: ark_std::borrow::Cow::Owned(powers_of_gamma_g),
+        };
+        let vk = VerifierKey {
+            g: pp.powers_of_g[0],
+            gamma_g: pp.powers_of_gamma_g[&0],
+            h: pp.h,
+            beta_h: pp.beta_h,
+            prepared_h: pp.prepared_h.clone(),
+            prepared_beta_h: pp.prepared_beta_h.clone(),
+        };
+        Ok((powers, vk))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     #![allow(non_camel_case_types)]
@@ -465,37 +496,6 @@ mod tests {
     type UniPoly_381 = DensePoly<<Bls12_381 as PairingEngine>::Fr>;
     type UniPoly_377 = DensePoly<<Bls12_377 as PairingEngine>::Fr>;
     type KZG_Bls12_381 = KZG10<Bls12_381, UniPoly_381>;
-
-    impl<E: PairingEngine, P: UVPolynomial<E::Fr>> KZG10<E, P> {
-        /// Specializes the public parameters for a given maximum degree `d` for polynomials
-        /// `d` should be less that `pp.max_degree()`.
-        pub(crate) fn trim(
-            pp: &UniversalParams<E>,
-            mut supported_degree: usize,
-        ) -> Result<(Powers<E>, VerifierKey<E>), Error> {
-            if supported_degree == 1 {
-                supported_degree += 1;
-            }
-            let powers_of_g = pp.powers_of_g[..=supported_degree].to_vec();
-            let powers_of_gamma_g = (0..=supported_degree)
-                .map(|i| pp.powers_of_gamma_g[&i])
-                .collect();
-
-            let powers = Powers {
-                powers_of_g: ark_std::borrow::Cow::Owned(powers_of_g),
-                powers_of_gamma_g: ark_std::borrow::Cow::Owned(powers_of_gamma_g),
-            };
-            let vk = VerifierKey {
-                g: pp.powers_of_g[0],
-                gamma_g: pp.powers_of_gamma_g[&0],
-                h: pp.h,
-                beta_h: pp.beta_h,
-                prepared_h: pp.prepared_h.clone(),
-                prepared_beta_h: pp.prepared_beta_h.clone(),
-            };
-            Ok((powers, vk))
-        }
-    }
 
     #[test]
     fn add_commitments_test() {

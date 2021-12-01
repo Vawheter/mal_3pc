@@ -1,18 +1,17 @@
 use ark_ec::PairingEngine;
 use ark_ff::Field;
 use ark_serialize::*;
-use crate::{
-    kzg10::{Kzg10Proof, Kzg10Comm, ProveAssignment, ProveKey, KZG10},
-};
-
 
 pub mod prover;
 pub mod verifier;
 
-pub use prover::create_bgin19_proof;
-pub use verifier::{gen_vermsg, verify_bgin19_proof};
+pub use prover::{create_bgin19_proof, Kzg10ComKey};
+pub use verifier::{gen_vermsg, verify_bgin19_proof, Kzg10VerKey};
 
 use crate::{String, Vec};
+
+pub type Kzg10Comm<E: PairingEngine> = ark_poly_commit::kzg10::Commitment<E>;
+pub type Kzg10Proof<E> = ark_poly_commit::kzg10::Proof<E>;
 
 /// The proof in FLPCP.
 #[derive(Clone, Debug, Eq, PartialEq, CanonicalSerialize, CanonicalDeserialize)]
