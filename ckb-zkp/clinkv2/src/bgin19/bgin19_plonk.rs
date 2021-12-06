@@ -63,10 +63,13 @@ fn bgin19_mul_plonk() {
     let kzg10_pp = KZG_Bls12_381::setup(degree, false, rng).unwrap();
     let (kzg10_ck, kzg10_vk) = KZG_Bls12_381::trim(&kzg10_pp, degree).unwrap();
 
-    // let (kzg10_ck, kzg10_vk) = KZG10::<Bls12_381>::trim(&pp, degree).unwrap();
-    let mut inputs: Vec<Vec<Vec<Fr>>> = (0..6).map(|_| (0..L).map(|_| (0..M).map(|_| Fr::rand(rng)).collect() ).collect()).collect();
-
-    // let zis:Vec<Fr> = (0..m).map(|i| mul_local(&xis[i], &xi_1s[i], &yis[i], &yi_1s[i], &alphais[i])).collect();
+    let mut inputs: Vec<Vec<Vec<Fr>>> = (0..5).map(|_| (0..L).map(|_| (0..M).map(|_| Fr::rand(rng)).collect() ).collect()).collect();
+    let zis = (0..L).map(|l| 
+        (0..M).map(|i| 
+            mul_local(&inputs[0][l][i], &inputs[1][l][i], &inputs[2][l][i], &inputs[3][l][i], &inputs[4][l][i])
+        ).collect::<Vec<_>>()
+    ).collect::<Vec<_>>();
+    inputs.push(zis);
 
     // let mut inputsi_1: Vec<Vec<Fr>> = vec![];
     // let zero = Fr::zero();
