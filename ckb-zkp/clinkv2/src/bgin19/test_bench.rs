@@ -42,6 +42,7 @@ fn test_fft() {
 fn test_kzg10() {
 
     let m:usize = 1000000;
+    let M = 1000;
     let L = 1;
     let rng = &mut test_rng();
 
@@ -51,17 +52,26 @@ fn test_kzg10() {
 
     let domain: GeneralEvaluationDomain<Fr> =
         EvaluationDomain::<Fr>::new(m+1).unwrap();
-
-    let mut kzg10_commit_time = Duration::new(0, 0);
     let hiding_bound = Some(1);
-    for i in 0..L {
-        let r_poly = DensePolynomial::<Fr>::rand(m, rng);
-        
-        let kzg10_commit_start = Instant::now();
-        let (_, _) = KZG10::<Bls12_381, DensePolynomial<Fr>>::commit(&kzg10_ck, &r_poly, hiding_bound, Some(rng)).unwrap();
-        kzg10_commit_time += kzg10_commit_start.elapsed();
-    }
 
-    println!("Verifying time: {:?}", kzg10_commit_time);
+    // let mut kzg10_com_time = Duration::new(0, 0);
+    // for i in 0..L {
+    //     let r_poly = DensePolynomial::<Fr>::rand(m, rng);
+        
+    //     let kzg10_com_start = Instant::now();
+    //     let (_, _) = KZG10::<Bls12_381, DensePolynomial<Fr>>::commit(&kzg10_ck, &r_poly, hiding_bound, Some(rng)).unwrap();
+
+    //     kzg10_com_time += kzg10_com_start.elapsed();
+    // }
+
+    let mut kzg10_com_time = Duration::new(0, 0);
+    for i in 0..6 {
+        let r_poly = DensePolynomial::<Fr>::rand(M, rng);
+        
+        let kzg10_com_start = Instant::now();
+        let (_, _) = KZG10::<Bls12_381, DensePolynomial<Fr>>::commit(&kzg10_ck, &r_poly, hiding_bound, Some(rng)).unwrap();
+        kzg10_com_time += kzg10_com_start.elapsed();
+    }
+    println!("Commiting 6 degree-M polys: {:?}", kzg10_com_time);
     // print!("Proof verified")
 }

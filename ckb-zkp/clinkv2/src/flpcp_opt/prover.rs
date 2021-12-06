@@ -18,7 +18,7 @@ use rayon::prelude::*;
 use crate::flpcp_opt::Proof;
 use ark_poly_commit::kzg10::KZG10;
 
-pub type Kzg10ComKey<'a, E: PairingEngine> = ark_poly_commit::kzg10::Powers<'a, E>;
+pub type Kzg10ComKey<'a, E> = ark_poly_commit::kzg10::Powers<'a, E>;
 
 pub fn create_bgin19_proof<E: PairingEngine, R: RngCore>(
     inputs: Vec<Vec<E::Fr>>,

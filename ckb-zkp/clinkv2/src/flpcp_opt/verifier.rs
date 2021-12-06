@@ -10,7 +10,7 @@ use rand::Rng;
 // DEV
 //use std::time::{Duration, Instant};
 use ark_poly_commit::kzg10::KZG10;
-pub type Kzg10VerKey<E: PairingEngine> = ark_poly_commit::kzg10::VerifierKey<E>;
+pub type Kzg10VerKey<E> = ark_poly_commit::kzg10::VerifierKey<E>;
 
 #[cfg(feature = "parallel")]
 use rayon::prelude::*;
@@ -41,8 +41,8 @@ pub fn gen_vermsg<E: PairingEngine> (
 
 pub fn verify_bgin19_proof<E: PairingEngine>(
     kzg10_vk: &Kzg10VerKey<E>,
-    p_vermsg: VerMsg<E>,
-    proof: Proof<E>,
+    p_vermsg: &VerMsg<E>,
+    proof: &Proof<E>,
     inputs: &Vec<Vec<E::Fr>>,
     r: E::Fr,
 ) -> bool {
@@ -53,8 +53,7 @@ pub fn verify_bgin19_proof<E: PairingEngine>(
 
     let domain: GeneralEvaluationDomain<E::Fr> =
         EvaluationDomain::<E::Fr>::new(m+1).unwrap();
-    let vanishing_poly = domain.vanishing_polynomial();
-    let vanishing_value = vanishing_poly.evaluate(&r);
+    let vanishing_value = domain.vanishing_polynomial().evaluate(&r);
     
 
     let mut f_r_values:Vec<E::Fr> = vec![];
@@ -63,6 +62,6 @@ pub fn verify_bgin19_proof<E: PairingEngine>(
         .for_each(|(f_r_share1, f_r_share2)| f_r_values.push(*f_r_share1 + f_r_share2));
     
     let p_r_value = f_r_values[0]*f_r_values[2] + f_r_values[0]*f_r_values[3] + f_r_values[1]*f_r_values[2] + f_r_values[4] - f_r_values[5];
-    // assert_eq!(p_r_value, proof.q_r_value*vanishing_value);
+    // assert_eq!(p_r_value, proof.q_r_value * vanishing_value);
     true
 }

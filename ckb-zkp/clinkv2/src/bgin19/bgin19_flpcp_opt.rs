@@ -50,7 +50,7 @@ fn mul_local<F: Field>(xi: &F, xi_1: &F, yi: &F, yi_1: &F, alphai: &F) -> F {
 fn bgin19_mul_flpcp_opt() {
     use ark_serialize::*;
 
-    let m:usize = 10000;
+    let m: usize = 1000000;
     // let M: usize = 1000;
     // let L = 1000;
     // let M: usize = 100;
@@ -112,10 +112,7 @@ fn bgin19_mul_flpcp_opt() {
     // let (proofi_1, proofi_2, _) = create_bgin19_proof::<Bls12_381, _>(inputsi, &kzg10_ck, M, L, &thetas, &betas, r, rng);
     let proof = create_bgin19_proof::<Bls12_381, _>(inputsi, &kzg10_ck, r, rng);
     let prove_time = prove_start.elapsed();
-    
-    let mut proof_bytes = vec![];
-    proof.serialize(&mut proof_bytes).unwrap();
-    println!("[FLPCP_OPT] Proof length: {}", proof_bytes.len());
+
     println!("Proving time: {:?}", prove_time);
 
     // // Two verifiers
@@ -126,9 +123,15 @@ fn bgin19_mul_flpcp_opt() {
 
     let verify_start = Instant::now();
     let pi_1_vermsg = gen_vermsg(&inputsi_1, r);
-    let result = verify_bgin19_proof(&kzg10_vk, pi_1_vermsg, proof, &inputsi_2, r);
+    let result = verify_bgin19_proof(&kzg10_vk, &pi_1_vermsg, &proof, &inputsi_2, r);
     let verify_time = verify_start.elapsed();
     assert!(result);
+
+    let mut vermsg_bytes = vec![];
+    pi_1_vermsg.serialize(&mut vermsg_bytes).unwrap();
+    let mut proof_bytes = vec![];
+    proof.serialize(&mut proof_bytes).unwrap();
+    println!("[FLPCP_OPT] communication: {}", vermsg_bytes.len() + proof_bytes.len());
 
     println!("Verifying time: {:?}", verify_time);
     // print!("Proof verified")

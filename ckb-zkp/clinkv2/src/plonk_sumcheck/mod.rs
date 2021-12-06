@@ -5,31 +5,25 @@ use ark_serialize::*;
 pub mod prover;
 pub mod verifier;
 
-pub use prover::{create_bgin19_proof, Kzg10ComKey};
-pub use verifier::{gen_vermsg, verify_bgin19_proof, Kzg10VerKey};
-
-use crate::{String, Vec};
+pub use prover::create_bgin19_proof;
+// pub use verifier::{gen_vermsg, verify_bgin19_proof};
 
 pub type Kzg10Comm<E> = ark_poly_commit::kzg10::Commitment<E>;
 pub type Kzg10Proof<E> = ark_poly_commit::kzg10::Proof<E>;
+pub type Kzg10ComKey<'a, E> = ark_poly_commit::kzg10::Powers<'a, E>;
+
+use crate::{String, Vec};
 
 /// The proof in FLPCP.
 #[derive(Clone, Debug, Eq, PartialEq, CanonicalSerialize, CanonicalDeserialize)]
 pub struct Proof<E: PairingEngine> {
-    q_comm: Kzg10Comm<E>,
-    q_r_value: E::Fr,
-    q_r_proof: Kzg10Proof<E>,
+    poly_comms: Vec<Kzg10Comm<E>>,
+    open_values: Vec<E::Fr>,
+    open_proofs: Vec<Kzg10Proof<E>>,
 }
-
-// #[derive(Clone, Debug, Eq, PartialEq, CanonicalSerialize, CanonicalDeserialize)]
-// pub struct Proof2<E: PairingEngine> {
-//     ws: Vec<E::Fr>,
-// }
 
 /// The verification message in FLPCP.
 #[derive(Clone, Debug, Eq, PartialEq, CanonicalSerialize, CanonicalDeserialize)]
 pub struct VerMsg<E: PairingEngine> {
-    f_r_shares: Vec<E::Fr>,
-    // p_r_value: E::Fr,
-    // b: E::Fr,
+    p_z_shares: Vec<E::Fr>,
 }

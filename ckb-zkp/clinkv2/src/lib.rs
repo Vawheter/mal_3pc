@@ -19,9 +19,11 @@ use alloc::{borrow::Cow, string::String, vec::Vec};
 #[cfg(feature = "std")]
 use std::{borrow::Cow, string::String, vec::Vec};
 
+pub mod batch_kzg10;
 pub mod bgin19;
 pub mod flpcp;
 pub mod flpcp_opt;
+pub mod plonk_sumcheck;
 // pub mod kzg10_distributed; // not work
 // pub mod flpcp_opt2;
 // pub mod fliop;
