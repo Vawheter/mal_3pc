@@ -39,7 +39,8 @@ pub fn create_bgin19_proof<E: PairingEngine, R: RngCore>(
     println!("domain size: {}", domain_size);
 
     // Compute p(x)
-    // Need M more points
+    // Using FFT - FFT: 6L*MlogM = 6mlogM; Poly Mul: 3L*(MlogM) = 3mlogM -> 9mlogM
+    // Using Points - Evaluating M points: 6L*M*M = 6mM; Mul and iFFT: 3L + 2Mlog2M
     let theta = E::Fr::rand(rng);
     let mut theta_power = one;
     let mut p_points = vec![zero; 2 * M];
