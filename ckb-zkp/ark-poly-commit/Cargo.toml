@@ -24,7 +24,7 @@ edition = "2018"
 ark-serialize = { version = "^0.3.0", default-features = false, features = [ "derive" ] }
 ark-ff = { version = "^0.3.0", default-features = false }
 ark-ec = { version = "^0.3.0", default-features = false }
-ark-poly = {version = "^0.3.0", default-features = false }
+ark-poly = {path = "../ark-poly", version = "^0.3.0", default-features = false }
 ark-sponge = {version = "^0.3.0", default-features = false}
 
 ark-std = { version = "^0.3.0", default-features = false }

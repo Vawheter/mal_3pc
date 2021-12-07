@@ -54,9 +54,9 @@ fn mul_local<F: Field>(xi: &F, xi_1: &F, yi: &F, yi_1: &F, alphai: &F) -> F {
 fn bgin19_mul_flpcp_original() {
     use ark_serialize::*;
 
-    let m:usize = 100000;
-    let M: usize = 1000;
-    let L: usize = 1000;
+    let m:usize = 1000;
+    let M: usize = 100;
+    let L: usize = 100;
     let rng = &mut test_rng();
 
     let mut inputs: Vec<Vec<Vec<Fr>>> = (0..5).map(|_| (0..L).map(|_| (0..M).map(|_| Fr::rand(rng)).collect() ).collect()).collect();
@@ -76,8 +76,8 @@ fn bgin19_mul_flpcp_original() {
     ).collect::<Vec<_>>();
 
     let prove_start = Instant::now();
-    let (proofi_1, proofi_2) = create_bgin19_proof_points::<Bls12_381, _>(inputs, M, L, &lag_values, rng);
-    // let (proofi_1, proofi_2) = create_bgin19_proof_fft::<Bls12_381, _>(inputs, M, L, rng);
+    // let (proofi_1, proofi_2) = create_bgin19_proof_points::<Bls12_381, _>(inputs, M, L, &lag_values, rng);
+    let (proofi_1, proofi_2) = create_bgin19_proof_fft::<Bls12_381, _>(inputs, M, L, rng);
     let prove_time = prove_start.elapsed();
     
     let mut proofi_1_bytes = vec![];

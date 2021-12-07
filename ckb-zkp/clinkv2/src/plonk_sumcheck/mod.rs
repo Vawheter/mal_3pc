@@ -20,6 +20,7 @@ pub struct Proof<E: PairingEngine> {
     poly_comms: Vec<Kzg10Comm<E>>,
     open_values: Vec<E::Fr>,
     open_proofs: Vec<Kzg10Proof<E>>,
+    open_challenge: E::Fr,
 }
 
 /// The verification message in FLPCP.

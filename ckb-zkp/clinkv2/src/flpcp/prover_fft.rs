@@ -40,8 +40,8 @@ pub fn create_bgin19_proof<E: PairingEngine, R: RngCore>(
     println!("domain size: {}", domain_size);
 
     // Compute p(x)
-    // Using FFT - FFT: 6L*MlogM = 6mlogM; Poly Mul: 3L*(MlogM) = 3mlogM -> 9mlogM
-    // Using Points - Evaluating M points: 6L*M*M = 6mM; Mul and iFFT: 3L + 2Mlog2M
+    // Using FFT - FFT: 6L*MlogM = 6mlogM; Poly Mul: 2L*(3*2Mlog2M) = 12mlog2M -> 18mlogM
+    // Using Points - Evaluating M points: 6L*M*M = 6mM; Mul and iFFT: 3LM + 2Mlog2M -> 3m + 6mM + 2MlogM
     let mut f_polys: Vec<Vec<DensePolynomial<E::Fr>>> = vec![];
 
     // println!("inputs: {:?}", inputs);
