@@ -26,5 +26,5 @@ pub mod flpcp_opt;
 pub mod plonk_sumcheck;
 // pub mod kzg10_distributed; // not work
 // pub mod flpcp_opt2;
-// pub mod fliop;
+pub mod fliop;
 

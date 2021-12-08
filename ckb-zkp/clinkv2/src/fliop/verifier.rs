@@ -12,75 +12,76 @@ use rand::Rng;
 #[cfg(feature = "parallel")]
 use rayon::prelude::*;
 
-use crate::flpcp_opt::{Proof1, Proof2, VerMsg};
+use crate::fliop::{Proof, VerMsg};
 
 pub fn gen_vermsg<E: PairingEngine> (
     // ws: Vec<E::Fr>,
-    proof2: Proof2<E>,
-    f_polys: &Vec<DensePolynomial<E::Fr>>,
-    // betas: &Vec<E::Fr>,
-    r: E::Fr,
-    // M: usize,
+    proof: &Proof<E>,
+    inputs: &Vec<Vec<E::Fr>>,
+    gammas: &Vec<E::Fr>,
+    lag_vals_domain_3: &Vec<Vec<E::Fr>>,
+    lag_vals_domain_5: &Vec<Vec<E::Fr>>,
+    ws: &Vec<E::Fr>,
+    rs: &Vec<E::Fr>,
 ) -> VerMsg<E> {
-    let L6 = proof2.ws.len();
-    let f_r_shares = f_polys.iter().map(|f| f.evaluate(&r)).collect();
-    // let p_poly = DensePolynomial::from_coefficients_vec(proof.p_coeffs);
-    // assert!(r >= E::Fr::from(p_poly.len() as u64));
-    // println!("r: {:?}", r);
-    // let p_r_value = p_poly.evaluate(&r);
-    // let mut b = E::Fr::zero();
-    // for i in 1..M+1 {
-    //     let p_poly_i = p_poly.evaluate(&E::Fr::from(i as u32));
-    //     // println!("p_poly_i: {:?}", p_poly_i);
-    //     b += betas[i-1]*p_poly_i;
-    // }
-    // let domain: GeneralEvaluationDomain<E::Fr> =
-    //     EvaluationDomain::<E::Fr>::new(2*(M+1)).unwrap(); 
-    // let p_ploy_evals = p_poly.evaluate_over_domain_by_ref(domain);
-    // // println!("p_ploy_evals_over_domain: {:?}", p_ploy_evals);
-    // for i in 0..p_ploy_evals.evals.len() {
-    //     b += p_ploy_evals.evals[i];
-    // }
+
+    let mut c = inputs[5].iter().map(|zi| zi).sum();
+    let mut f_r_values = inputs.clone();
+    let L = proof.q_shares.len() - 1;
+    let mut b = E::Fr::zero();
+    for l in 0..L {
+        let b_l = c - proof.q_shares[l][0] - proof.q_shares[l][1];
+        b += gammas[l] * b_l;
+        // q_r_share
+        c = (0..3).map(|j| 
+            lag_vals_domain_3[l][j] * proof.q_shares[l][j]
+        ).sum();
+
+        let len_by_2 = f_r_values[0].len() / 2;
+        f_r_values = (0..5).map(|k|
+            (0..len_by_2).map(|j|
+                lag_vals_domain_3[l][0] * f_r_values[k][j] + lag_vals_domain_3[l][1] * f_r_values[k][j+len_by_2]
+            ).collect::<Vec<_>>()
+        ).collect::<Vec<Vec<_>>>();
+    }
+    c = (0..5).map(|j| 
+        lag_vals_domain_5[L][j] * proof.q_shares[L][j]
+    ).sum();
+    let b_L = c - proof.q_shares[L][0] - proof.q_shares[L][1] - proof.q_shares[L][2] - proof.q_shares[L][3];
+    b += gammas[L] * b_L;
+
+    let f_r_values = (0..5).map(|k|
+        lag_vals_domain_5[L][0] * ws[k] + lag_vals_domain_5[L][1] * f_r_values[k][0] + lag_vals_domain_5[L][2] * f_r_values[k][1]
+    ).collect::<Vec<E::Fr>>();
+
     VerMsg {
-        f_r_shares,
-        // p_r_value,
-        // b,
+        b_share: b,
+        f_r_shares: f_r_values,
+        q_r_share: c,
     }
 }
 
 pub fn verify_bgin19_proof<E: PairingEngine>(
     p_vermsg: VerMsg<E>,
-    proof1: Proof1<E>,
-    f_polys: &Vec<DensePolynomial<E::Fr>>,
-    betas: &Vec<E::Fr>,
-    thetas: &Vec<E::Fr>,
-    r: E::Fr,
-    M: usize,
+    proof: Proof<E>,
+    inputs: &Vec<Vec<E::Fr>>,
+    gammas: &Vec<E::Fr>,
+    lag_vals_domain_3: &Vec<Vec<E::Fr>>,
+    lag_vals_domain_5: &Vec<Vec<E::Fr>>,
+    ws: &Vec<E::Fr>,
+    rs: &Vec<E::Fr>,
 ) -> bool {
-    let L = f_polys.len() / 6; 
-    println!("L: {}", L); 
-    let my_vermsg = gen_vermsg::<E>(Proof2{ws: proof1.ws }, f_polys, r);
-    // b = 0
-    // assert_eq!(my_vermsg.b + p_vermsg.b, E::Fr::zero());
-    let domain: GeneralEvaluationDomain<E::Fr> =
-        EvaluationDomain::<E::Fr>::new(M+1).unwrap();
-    let vanishing_poly = domain.vanishing_polynomial();
-    let vanishing_value = vanishing_poly.evaluate(&r);
-    assert_eq!(proof1.pq_r_values[0], proof1.pq_r_values[1]*vanishing_value);
 
-    let mut f_r_values:Vec<E::Fr> = vec![];
-    cfg_iter!(my_vermsg.f_r_shares)
-        .zip(&p_vermsg.f_r_shares)
-        .for_each(|(f_r_share1, f_r_share2)| f_r_values.push(*f_r_share1 + f_r_share2));
-    let mut g_output_r = E::Fr::zero();
-    for i in 0..L {
-        // let id = 6 * i;
-        let c_output_r = f_r_values[i]*f_r_values[i+2*L] 
-                    + f_r_values[i]*f_r_values[i+3*L] 
-                    + f_r_values[i]*f_r_values[i+2*L] 
-                    + f_r_values[i] - f_r_values[i+5*L];        
-        g_output_r +=  c_output_r * thetas[i];
-    }
-    assert_eq!(proof1.pq_r_values[0], g_output_r);
+    let my_vermsg = gen_vermsg::<E>(&proof, &inputs, &gammas, lag_vals_domain_3, lag_vals_domain_5, ws, rs);
+    let b = p_vermsg.b_share + my_vermsg.b_share;
+    // assert_eq!(b, E::Fr::zero());
+
+    let q_r_value = p_vermsg.q_r_share + my_vermsg.q_r_share;
+    let f_r_values = (0..5).map(|i| 
+        p_vermsg.f_r_shares[i] + my_vermsg.f_r_shares[i]
+    ).collect::<Vec<E::Fr>>();
+    let f_r_value = f_r_values[0] * (f_r_values[2] + f_r_values[3]) + f_r_values[1] * f_r_values[2] + f_r_values[4]; 
+    // assert_eq!(q_r_value, f_r_value);
+   
     true
 }
