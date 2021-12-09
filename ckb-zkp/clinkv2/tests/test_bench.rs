@@ -9,10 +9,6 @@ use ark_poly_commit::kzg10::KZG10;
 use ark_std::test_rng;
 use ark_std::UniformRand;
 
-use crate::{
-    flpcp_opt::{Kzg10Proof, Kzg10ComKey},
-};
-
 #[test]
 fn test_fft() {
 
