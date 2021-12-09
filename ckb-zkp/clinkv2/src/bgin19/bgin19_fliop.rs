@@ -29,7 +29,7 @@ fn mul_local<F: Field>(xi: &F, xi_1: &F, yi: &F, yi_1: &F, alphai: &F) -> F {
 fn bgin19_mul_fliop() {
     use ark_serialize::*;
 
-    let mut m: usize = 8;
+    let mut m: usize = 1000000;
     m = m.next_power_of_two();
     let logm = ark_std::log2(m) as usize;
     let rng = &mut test_rng();
@@ -42,10 +42,6 @@ fn bgin19_mul_fliop() {
 
     let inputsi_1: Vec<Vec<Fr>> = (0..6).map(|_| (0..m).map(|_| Fr::rand(rng) ).collect()).collect();
     let inputsi_2: Vec<Vec<Fr>> = (0..6).map(|k| (0..m).map(|j| inputs[k][j] - inputsi_1[k][j] ).collect()).collect();
-    
-    // // For debug
-    // let inputsi_1: Vec<Vec<Fr>> = inputs.clone();
-    // let inputsi_2: Vec<Vec<Fr>> = (0..6).map(|k| (0..m).map(|j| Fr::zero() ).collect()).collect();
 
     // Check inputs, no problem
     for j in 0..m {
@@ -60,27 +56,33 @@ fn bgin19_mul_fliop() {
     let wsi_2= (0..6).map(|i| ws[i] - wsi_1[i]).collect::<Vec<_>>();
     // Randomn linear combination used for checking b
     let gammas= (0..logm).map(|_| Fr::rand(rng)).collect::<Vec<_>>();
+    // Randomn linear combination used verifying all multiplications
+    let thetas= (0..m).map(|_| Fr::rand(rng)).collect::<Vec<_>>();
 
     let prove_start = Instant::now();
-    let (proofi_1, proofi_2) = create_bgin19_proof::<Bls12_381, _>(inputs, &rs, &ws, rng);
+    let (proofi_1, proofi_2) = create_bgin19_proof::<Bls12_381, _>(inputs, &rs, &ws, &thetas, rng);
     let prove_time = prove_start.elapsed();
-    
-    let mut proofi_1_bytes = vec![];
-    proofi_1.serialize(&mut proofi_1_bytes).unwrap();
-    let mut proofi_2_bytes = vec![];
-    proofi_2.serialize(&mut proofi_2_bytes).unwrap();
-    let mut rs_bytes = vec![];
-    rs.serialize(&mut rs_bytes).unwrap();
-    println!("[FLIOP] Proof length: {}", proofi_1_bytes.len() + proofi_2_bytes.len() + rs_bytes.len() * 2);
     println!("Proving time: {:?}", prove_time);
 
     // // Two verifiers
     let verify_start = Instant::now();
-    let pi_1_vermsg = gen_vermsg(&proofi_1, &inputsi_1, &gammas, &wsi_1, &rs);
-    let result = verify_bgin19_proof(pi_1_vermsg, proofi_2, &inputsi_2, &gammas, &wsi_2, &rs);
+    let pi_1_vermsg = gen_vermsg(&proofi_1, &inputsi_1, &gammas, &thetas, &wsi_1, &rs);
+    let result = verify_bgin19_proof(pi_1_vermsg, &proofi_2, &inputsi_2, &gammas, &thetas, &wsi_2, &rs);
     let verify_time = verify_start.elapsed();
     assert!(result);
-
     println!("Verifying time: {:?}", verify_time);
+
+    let mut proofi_1_bytes = vec![];
+    proofi_1.serialize(&mut proofi_1_bytes).unwrap();
+    let mut proofi_2_bytes = vec![];
+    proofi_2.serialize(&mut proofi_2_bytes).unwrap();
+    let mut rands_bytes = vec![];
+    let mut rands = vec![];
+    rands.push(rs);
+    rands.push(gammas);
+    rands.push(thetas);
+    rands.serialize(&mut rands_bytes).unwrap();
+    println!("[FLIOP] Proof length: {}", proofi_1_bytes.len() + proofi_2_bytes.len() + rands_bytes.len());
+
     print!("Proof verified")
 }
