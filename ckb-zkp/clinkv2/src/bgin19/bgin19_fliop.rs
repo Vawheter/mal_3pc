@@ -54,20 +54,20 @@ fn bgin19_mul_fliop() {
     let ws= (0..6).map(|_| Fr::rand(rng)).collect::<Vec<_>>();
     let wsi_1= (0..6).map(|_| Fr::rand(rng)).collect::<Vec<_>>();
     let wsi_2= (0..6).map(|i| ws[i] - wsi_1[i]).collect::<Vec<_>>();
-    // Randomn linear combination used for checking b
-    let gammas= (0..logm).map(|_| Fr::rand(rng)).collect::<Vec<_>>();
-    // Randomn linear combination used verifying all multiplications
-    let thetas= (0..m).map(|_| Fr::rand(rng)).collect::<Vec<_>>();
+    // Randomn linear combination used for checking b (seed)
+    let gamma= Fr::rand(rng);
+    // Randomn linear combination used verifying all multiplications (seed)
+    let theta= Fr::rand(rng);
 
     let prove_start = Instant::now();
-    let (proofi_1, proofi_2) = create_bgin19_proof::<Bls12_381, _>(inputs, &rs, &ws, &thetas, rng);
+    let (proofi_1, proofi_2) = create_bgin19_proof::<Bls12_381, _>(inputs, &rs, &ws, theta, rng);
     let prove_time = prove_start.elapsed();
     println!("Proving time: {:?}", prove_time);
 
     // // Two verifiers
     let verify_start = Instant::now();
-    let pi_1_vermsg = gen_vermsg(&proofi_1, &inputsi_1, &gammas, &thetas, &wsi_1, &rs);
-    let result = verify_bgin19_proof(pi_1_vermsg, &proofi_2, &inputsi_2, &gammas, &thetas, &wsi_2, &rs);
+    let pi_1_vermsg = gen_vermsg(&proofi_1, &inputsi_1, gamma, theta, &wsi_1, &rs);
+    let result = verify_bgin19_proof(pi_1_vermsg, &proofi_2, &inputsi_2, gamma, theta, &wsi_2, &rs);
     let verify_time = verify_start.elapsed();
     assert!(result);
     println!("Verifying time: {:?}", verify_time);
@@ -76,13 +76,13 @@ fn bgin19_mul_fliop() {
     proofi_1.serialize(&mut proofi_1_bytes).unwrap();
     let mut proofi_2_bytes = vec![];
     proofi_2.serialize(&mut proofi_2_bytes).unwrap();
-    let mut rands_bytes = vec![];
-    let mut rands = vec![];
-    rands.push(rs);
-    rands.push(gammas);
-    rands.push(thetas);
-    rands.serialize(&mut rands_bytes).unwrap();
-    println!("[FLIOP] Proof length: {}", proofi_1_bytes.len() + proofi_2_bytes.len() + rands_bytes.len());
+    // let mut rands_bytes = vec![];
+    // let mut rands = vec![];
+    // rands.push(rs);
+    // rands.push(theta);
+    // rands.push(gamma);
+    // rands.serialize(&mut rands_bytes).unwrap();
+    println!("[FLIOP] Proof length: {}", proofi_1_bytes.len() + proofi_2_bytes.len());
 
     print!("Proof verified")
 }

@@ -8,7 +8,7 @@ use crate::flpcp::{
     Proof, 
     create_bgin19_proof_fft,
     create_bgin19_proof_points,
-     //gen_vermsg, verify_bgin19_proof,
+    gen_vermsg, verify_bgin19_proof,
 };
 use ark_std::UniformRand;
 use ark_std::rand::RngCore;
@@ -26,37 +26,13 @@ fn mul_local<F: Field>(xi: &F, xi_1: &F, yi: &F, yi_1: &F, alphai: &F) -> F {
     z1
 }
 
-// const SAMPLES: usize = 100;
-
-// pub fn prove_mul<E: PairingEngine, R: Rng> (
-//     inputs:Vec<Vec<E::Fr>>,
-//     M: usize,
-//     L: usize,
-//     thetas: &Vec<E::Fr>,
-//     betas: &Vec<E::Fr>,
-//     rng: &mut R,
-// ) -> (Proof<E>, Proof<E>, Vec<> {
-//     let rng = &mut thread_rng();
-
-//     println!("Creating proof...");
-    
-// }
-
-
-// pub fn verify_mul<E: PairingEngine> (
-//     proof: Proof<E>,
-//     n: usize,
-// ) -> bool {
-//     // Verifier
-// }
-
 #[test]
 fn bgin19_mul_flpcp_original() {
     use ark_serialize::*;
 
-    let m:usize = 1000;
-    let M: usize = 100;
-    let L: usize = 100;
+    let m:usize = 100000;
+    let M: usize = 1000;
+    let L: usize = 1000;
     let rng = &mut test_rng();
 
     let mut inputs: Vec<Vec<Vec<Fr>>> = (0..5).map(|_| (0..L).map(|_| (0..M).map(|_| Fr::rand(rng)).collect() ).collect()).collect();
@@ -66,43 +42,45 @@ fn bgin19_mul_flpcp_original() {
         ).collect::<Vec<_>>()
     ).collect::<Vec<_>>();
     inputs.push(zis);
+
+    let inputsi_1: Vec<Vec<Vec<Fr>>> = (0..6).map(|_| (0..L).map(|_| (0..M).map(|_| Fr::rand(rng)).collect() ).collect()).collect();
+    let inputsi_2: Vec<Vec<Vec<Fr>>> = (0..6).map(|k| (0..L).map(|l| (0..M).map(|j| inputs[k][l][j] - inputsi_1[k][l][j] ).collect() ).collect()).collect();
+
     
     let domain: GeneralEvaluationDomain<Fr> =
-        EvaluationDomain::<Fr>::new(2*M).unwrap();
+        EvaluationDomain::<Fr>::new(M).unwrap();
 
-    let theta= Fr::rand(rng);
-    let lag_values =  (M..2*M).map(|i| 
-        domain.evaluate_all_lagrange_coefficients(Fr::from(i as u64))
-    ).collect::<Vec<_>>();
+    let theta: Fr = Fr::rand(rng);
+    let beta: Fr = Fr::rand(rng);
+    let r: Fr = domain.sample_element_outside_domain(rng);
+    let ws: Vec<Vec<Fr>> = (0..6).map(|_| (0..L).map(|_| Fr::rand(rng) ).collect() ).collect();
+    let wsi_1: Vec<Vec<Fr>> = (0..6).map(|_| (0..L).map(|_| Fr::rand(rng) ).collect() ).collect();
+    let wsi_2: Vec<Vec<Fr>> = (0..6).map(|k| (0..L).map(|l| ws[k][l] - wsi_1[k][l] ).collect() ).collect();
+
+    // let lag_values =  (M..2*M).map(|i| 
+    //     domain.evaluate_all_lagrange_coefficients(Fr::from(i as u64))
+    // ).collect::<Vec<_>>();
 
     let prove_start = Instant::now();
     // let (proofi_1, proofi_2) = create_bgin19_proof_points::<Bls12_381, _>(inputs, M, L, &lag_values, rng);
-    let (proofi_1, proofi_2) = create_bgin19_proof_fft::<Bls12_381, _>(inputs, M, L, rng);
+    let (proofi_1, proofi_2) = create_bgin19_proof_fft::<Bls12_381, _>(inputs, theta, &ws, rng);
     let prove_time = prove_start.elapsed();
-    
+    println!("Proving time: {:?}", prove_time);
+
     let mut proofi_1_bytes = vec![];
     proofi_1.serialize(&mut proofi_1_bytes).unwrap();
     let mut proofi_2_bytes = vec![];
     proofi_2.serialize(&mut proofi_2_bytes).unwrap();
+
+    // Two verifiers
+    let verify_start = Instant::now();
+    let pi_1_vermsg = gen_vermsg(proofi_1, &inputsi_1, beta, &wsi_1, r);
+    let result = verify_bgin19_proof(pi_1_vermsg, proofi_2, &inputsi_2, beta, theta, &wsi_2, r);
+    let verify_time = verify_start.elapsed();
+    assert!(result);
+    println!("Verifying time: {:?}", verify_time);
+
     println!("[FLPCP] Proof length: {}", proofi_1_bytes.len() + proofi_2_bytes.len());
-    println!("Proving time: {:?}", prove_time);
 
-    // // Two verifiers
-
-    // let (_, _, fi_1_polys) = create_bgin19_proof::<Bls12_381, _>(inputsi_1, M, L, &thetas, &betas, rng);
-    // let (_, _, fi_2_polys) = create_bgin19_proof::<Bls12_381, _>(inputsi_2, M, L, &thetas, &betas, rng);
-    
-    // let min = Fr::from((M+1).next_power_of_two() as u64);
-    // let mut r: Fr = Fr::rand(rng);
-    // while r <= min {
-    //     r = Fr::rand(rng);
-    // }
-    // let verify_start = Instant::now();
-    // let pi_1_vermsg = gen_vermsg(proofi_1, &fi_1_polys, &betas, r, M);
-    // let result = verify_bgin19_proof(pi_1_vermsg, proofi_2, &fi_2_polys, &betas, &thetas, r, M);
-    // let verify_time = verify_start.elapsed();
-    // assert!(result);
-
-    // println!("Verifying time: {:?}", verify_time);
-    // print!("Proof verified")
+    print!("Proof verified")
 }

@@ -1,7 +1,7 @@
 #![allow(non_snake_case)]
 
 use ark_ec::PairingEngine;
-use ark_ff::Zero;
+use ark_ff::{One, Zero};
 use ark_poly::{EvaluationDomain, GeneralEvaluationDomain};
 
 // DEV
@@ -15,8 +15,8 @@ use crate::fliop::{Proof, VerMsg};
 pub fn gen_vermsg<E: PairingEngine> (
     proof: &Proof<E>,
     inputs: &Vec<Vec<E::Fr>>,
-    gammas: &Vec<E::Fr>,
-    thetas: &Vec<E::Fr>,
+    gamma: E::Fr,
+    theta: E::Fr,
     ws: &Vec<E::Fr>,
     rs: &Vec<E::Fr>,
 ) -> VerMsg<E> {
@@ -38,23 +38,23 @@ pub fn gen_vermsg<E: PairingEngine> (
     EvaluationDomain::<E::Fr>::new(8).unwrap();
 
     let mut f_r_values = inputs.clone();
-    for k in 0..2 {
-        for j in 0..m {
-            f_r_values[k][j] *= thetas[j];
-        }
+    let mut theta_power = E::Fr::one();
+    for j in 0..m {
+        f_r_values[0][j] *= theta_power;
+        f_r_values[1][j] *= theta_power;
+        f_r_values[4][j] *= theta_power;
+        f_r_values[5][j] *= theta_power;
+        theta_power *= theta;
     }
-    for k in 4..6 {
-        for j in 0..m {
-            f_r_values[k][j] *= thetas[j];
-        }
-    }
+
 
     let mut c: E::Fr = f_r_values[5].iter().map(|zi| zi).sum();
 
+    let mut gamma_power = E::Fr::one();
     // Common rounds
     for l in 0..L {
         let b_l = c - proof.q_shares[l][4] - proof.q_shares[l][5];
-        b += gammas[l] * b_l;
+        b += gamma_power * b_l;
 
         let lag_vals_domain_4 = domain_4.evaluate_all_lagrange_coefficients(rs[l]);
 
@@ -70,12 +70,14 @@ pub fn gen_vermsg<E: PairingEngine> (
                 lag_vals_domain_2[0] * f_r_values[k][j] + lag_vals_domain_2[1] * f_r_values[k][j+len_by_2]
             ).collect::<Vec<_>>()
         ).collect::<Vec<Vec<_>>>();
+
+        gamma_power *= gamma;
     }
 
     // The last round
     // IMPORTANT: the last round [c] should still be equal to [q(1)] + [q(2)], which are indexed by 8, 9 respectively
     let b_L = c - proof.q_shares[L][8] - proof.q_shares[L][9];
-    b += gammas[L] * b_L;
+    b += gamma_power * b_L;
 
     let lag_vals_domain_8 = domain_8.evaluate_all_lagrange_coefficients(rs[L]);
     c = (0..8).map(|j| 
@@ -98,13 +100,13 @@ pub fn verify_bgin19_proof<E: PairingEngine>(
     p_vermsg: VerMsg<E>,
     proof: &Proof<E>,
     inputs: &Vec<Vec<E::Fr>>,
-    gammas: &Vec<E::Fr>,
-    thetas: &Vec<E::Fr>,
+    gamma: E::Fr,
+    theta: E::Fr,
     ws: &Vec<E::Fr>,
     rs: &Vec<E::Fr>,
 ) -> bool {
     
-    let my_vermsg = gen_vermsg::<E>(&proof, &inputs, &gammas, &thetas, ws, rs);
+    let my_vermsg = gen_vermsg::<E>(&proof, &inputs, gamma, theta, ws, rs);
 
     let b = p_vermsg.b_share + my_vermsg.b_share;
     assert_eq!(b, E::Fr::zero());

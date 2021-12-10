@@ -16,7 +16,7 @@ pub fn create_bgin19_proof<E: PairingEngine, R: RngCore>(
     inputs: Vec<Vec<E::Fr>>,
     rs: &Vec<E::Fr>,
     ws: &Vec<E::Fr>,
-    thetas: &Vec<E::Fr>,
+    theta: E::Fr,
     rng: &mut R,
 ) -> (Proof<E>, Proof<E>) {
     
@@ -42,22 +42,19 @@ pub fn create_bgin19_proof<E: PairingEngine, R: RngCore>(
     let mut f_r_values = inputs.clone();
     // xi, xi-1, yi, yi-1, alphai, zi
     // Linear shift: theta * xi, theta * xi-1, theta * alphai, theta * zi
-    for k in 0..2 {
-        for j in 0..m {
-            f_r_values[k][j] *= thetas[j];
-        }
-    }
-    for k in 4..6 {
-        for j in 0..m {
-            f_r_values[k][j] *= thetas[j];
-        }
+    // shift index: 0, 1, 4, no need for zi
+    let mut theta_power = one;
+    for j in 0..m {
+        f_r_values[0][j] *= theta_power;
+        f_r_values[1][j] *= theta_power;
+        f_r_values[4][j] *= theta_power;
+        theta_power *= theta;
     }
 
     let mut q_shares_1: Vec<Vec<E::Fr>> = vec![];
     let mut q_shares_2: Vec<Vec<E::Fr>> = vec![];
 
     loop {
-
         // the last round
         if L == 1 {
             // f(x) degree: 2, should work over domain 4

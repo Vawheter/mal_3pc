@@ -1,12 +1,10 @@
+#![allow(non_snake_case)]
+
 use ark_ec::PairingEngine;
-use ark_ff::{Field, One, ToBytes, UniformRand, Zero};
+use ark_ff::{One, UniformRand, Zero};
 use ark_poly::polynomial::univariate::DensePolynomial;
-use ark_poly::{EvaluationDomain, GeneralEvaluationDomain, Polynomial, UVPolynomial};
-use ark_serialize::CanonicalSerialize;
-use ark_std::{cfg_iter, cfg_iter_mut};
-use rand::Rng;
+use ark_poly::{EvaluationDomain, GeneralEvaluationDomain, UVPolynomial};
 use ark_std::rand::RngCore;
-use rand::prelude::*;
 
 // DEV
 //use std::time::{Duration, Instant};

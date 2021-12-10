@@ -1,14 +1,10 @@
-use std::ops::Neg;
+#![allow(non_snake_case)]
 
 use ark_ec::PairingEngine;
-use ark_ff::{Field, One, ToBytes, UniformRand, Zero};
+use ark_ff::{One, UniformRand, Zero};
 use ark_poly::polynomial::univariate::DensePolynomial;
-use ark_poly::{EvaluationDomain, GeneralEvaluationDomain, Polynomial, UVPolynomial};
-use ark_serialize::CanonicalSerialize;
-use ark_std::{cfg_iter, cfg_iter_mut};
-use rand::Rng;
+use ark_poly::{EvaluationDomain, GeneralEvaluationDomain, UVPolynomial};
 use ark_std::rand::RngCore;
-use rand::prelude::*;
 
 // DEV
 //use std::time::{Duration, Instant};
@@ -20,22 +16,20 @@ use crate::flpcp::Proof;
 
 pub fn create_bgin19_proof<E: PairingEngine, R: RngCore>(
     inputs: Vec<Vec<Vec<E::Fr>>>,
-    M: usize,
-    L: usize,
-    // theta: E::Fr,
+    theta: E::Fr,
+    ws: &Vec<Vec<E::Fr>>,
     rng: &mut R,
 ) -> (Proof<E>, Proof<E>) {
     
     // inputs[0], ..., inputs[5]
     assert_eq!(inputs.len(), 6);
-    assert_eq!(inputs[0].len(), L);
-    assert_eq!(inputs[0][0].len(), M);
+    let L = inputs[0].len();
+    let M = inputs[0][0].len();
     
     let one = E::Fr::one();
-    let zero = E::Fr::zero();
 
     let domain: GeneralEvaluationDomain<E::Fr> =
-        EvaluationDomain::<E::Fr>::new(M).unwrap();
+        EvaluationDomain::<E::Fr>::new(M + 1).unwrap();
     let domain_size = domain.size();
     println!("domain size: {}", domain_size);
 
@@ -49,7 +43,8 @@ pub fn create_bgin19_proof<E: PairingEngine, R: RngCore>(
         let mut fk_polys = vec![];
         for l in 0..L {
             // Compute f(x) polynomial
-            let flk_coeffs = domain.ifft(&inputs[k][l]);
+            let points = [&[ws[k][l]], &inputs[k][l][..]].concat();
+            let flk_coeffs = domain.ifft(&points);
             let flk_poly = DensePolynomial::from_coefficients_vec(flk_coeffs);
             // println!("f_poly.len(): {}", f_poly.coeffs.len());
             fk_polys.push(flk_poly);
@@ -59,7 +54,6 @@ pub fn create_bgin19_proof<E: PairingEngine, R: RngCore>(
    
     // Compute p(x) polynomial
     // p(x) = theta1*(f1(x)*f3(x)+f1(x)*f4(x)+f2(x)*f3(x)+f5(x)-f6(x)) + ... 
-    let theta = E::Fr::rand(rng);
     let mut theta_power = one;
     let mut p_poly = DensePolynomial::<E::Fr>::zero();
     for l in 0..L {
@@ -69,20 +63,18 @@ pub fn create_bgin19_proof<E: PairingEngine, R: RngCore>(
         p_poly += (theta_power, &c_poly);
         theta_power *= theta;
     }
+    // should be degree 2M , 2*(domain_size-1)+1 after padding
+    let p_len = p_poly.coeffs.len();
+    assert_eq!(p_len, 2 * domain_size - 1);
 
-    // let ws_share1: Vec<E::Fr> = (0..6*L).map(|_| E::Fr::rand(rng)).collect();
-    let p_coeffs_share1: Vec<E::Fr> = (0..domain_size).map(|_| E::Fr::rand(rng)).collect();
-
-    // let ws_share2 = (0..6*L).map(|i| ws[i] - ws_share1[i]).collect();
-    let p_coeffs_share2 = (0..domain_size).map(|i| p_poly.coeffs[i] - p_coeffs_share1[i]).collect();
+    let p_coeffs_share1: Vec<E::Fr> = (0..p_len).map(|_| E::Fr::rand(rng)).collect();
+    let p_coeffs_share2: Vec<E::Fr> = (0..p_len).map(|i| p_poly.coeffs[i] - p_coeffs_share1[i]).collect();
 
     let proof1 = Proof {
-        // ws: ws_share1,
         p_coeffs_shares: p_coeffs_share1,
     };
     
     let proof2 = Proof {
-        // ws: ws_share2,
         p_coeffs_shares: p_coeffs_share2,
     };
 
