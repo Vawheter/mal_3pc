@@ -6,16 +6,10 @@
 //! This construction achieves extractability in the algebraic group model (AGM).
 
 use ark_ec::{
-    msm::{FixedBaseMSM, VariableBaseMSM},
     AffineCurve, PairingEngine, ProjectiveCurve,
 };
-use ark_ff::{to_bytes, Field, One, PrimeField, ToBytes, UniformRand, Zero};
-use ark_poly::{polynomial::univariate::DensePolynomial, Polynomial, UVPolynomial};
-use ark_serialize::*;
-use ark_std::{cfg_iter, io, rand::RngCore};
-use core::marker::PhantomData;
-use core::ops::{Add, AddAssign};
-use rand::Rng;
+use ark_ff::{Field, One, Zero};
+use ark_poly::{polynomial::univariate::DensePolynomial, Polynomial};
 
 use ark_poly_commit::{
     Error, 
@@ -70,62 +64,43 @@ pub fn batch_open<'a, E: PairingEngine>(
     })
 }
 
-/// Check that each `proof_i` in `proofs` is a valid proof of evaluation for
-/// `commitment_i` at `point_i`.
-pub fn batch_check_to_mul_values<E: PairingEngine, R: RngCore>(
+
+
+fn accumulate_commitments_and_values<'a, E: PairingEngine>(
+    _vk: &VerifierKey<E>,
+    commitments: &[Commitment<E>],
+    values: &[E::Fr],
+    opening_challenge: E::Fr,
+) -> Result<(E::G1Projective, E::Fr), Error> {
+    //let acc_time = start_timer!(|| "Accumulating commitments and values");
+    let mut combined_comm = E::G1Projective::zero();
+    let mut combined_value = E::Fr::zero();
+    let mut challenge_i = E::Fr::one();
+    for (commitment, value) in commitments.into_iter().zip(values) {
+        combined_comm += &commitment.0.mul(challenge_i);
+        combined_value += &(*value * &challenge_i);
+        challenge_i *= &opening_challenge.square();
+    }
+
+    //end_timer!(acc_time);
+    Ok((combined_comm, combined_value))
+}
+
+
+pub fn batch_check<'a, E: PairingEngine>(
     vk: &VerifierKey<E>,
     commitments: &[Commitment<E>],
-    points: &[E::Fr],
+    point: E::Fr,
     values: &[E::Fr],
-    proofs: &[Proof<E>],
-    rng: &mut R,
+    proof: &Proof<E>,
+    opening_challenge: E::Fr,
 ) -> Result<bool, Error> {
-    // let check_time =
-    //     start_timer!(|| format!("Checking {} evaluation proofs", commitments.len()));
-    let g = vk.g.into_projective();
-    let gamma_g = vk.gamma_g.into_projective();
-    let mut total_c = <E::G1Projective>::zero();
-    let mut total_w = <E::G1Projective>::zero();
-
-    //let combination_time = start_timer!(|| "Combining commitments and proofs");
-    let mut randomizer = E::Fr::one();
-    // Instead of multiplying g and gamma_g in each turn, we simply accumulate
-    // their coefficients and perform a final multiplication at the end.
-    let mut g_multiplier = E::Fr::zero();
-    let mut gamma_g_multiplier = E::Fr::zero();
-    for (((c, z), v), proof) in commitments.iter().zip(points).zip(values).zip(proofs) {
-        let w = proof.w;
-        let mut temp = w.mul(*z);
-        temp.add_assign_mixed(&c.0);
-        let c = temp;
-        g_multiplier += &(randomizer * v);
-        if let Some(random_v) = proof.random_v {
-            gamma_g_multiplier += &(randomizer * &random_v);
-        }
-        total_c += &c.mul(randomizer.into_repr());
-        total_w += &w.mul(randomizer.into_repr());
-        // We don't need to sample randomizers from the full field,
-        // only from 128-bit strings.
-        randomizer = u128::rand(rng).into();
-    }
-    total_c -= &g.mul(g_multiplier.into_repr());
-    total_c -= &gamma_g.mul(gamma_g_multiplier.into_repr());
-    //end_timer!(combination_time);
-
-    //let to_affine_time = start_timer!(|| "Converting results to affine for pairing");
-    let affine_points = E::G1Projective::batch_normalization_into_affine(&[-total_w, total_c]);
-    let (total_w, total_c) = (affine_points[0], affine_points[1]);
-    //end_timer!(to_affine_time);
-
-    //let pairing_time = start_timer!(|| "Performing product of pairings");
-    let result = E::product_of_pairings(&[
-        (total_w.into(), vk.prepared_beta_h.clone()),
-        (total_c.into(), vk.prepared_h.clone()),
-    ])
-    .is_one();
-    //end_timer!(pairing_time);
-
-    //end_timer!(check_time, || format!("Result: {}", result));
+    //let check_time = start_timer!(|| "Checking evaluations");
+    let (combined_comm, combined_value) =
+        accumulate_commitments_and_values(vk, commitments, values, opening_challenge)?;
+    let combined_comm = Commitment(combined_comm.into());
+    let result = KZG10::<E, DensePolynomial<E::Fr>>::check(vk, &combined_comm, point, combined_value, proof)?;
+    //end_timer!(check_time);
     Ok(result)
 }
 

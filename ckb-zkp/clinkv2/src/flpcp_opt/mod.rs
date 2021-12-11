@@ -1,5 +1,4 @@
 use ark_ec::PairingEngine;
-use ark_ff::Field;
 use ark_serialize::*;
 
 pub mod prover;
@@ -8,7 +7,7 @@ pub mod verifier;
 pub use prover::{create_bgin19_proof, Kzg10ComKey};
 pub use verifier::{gen_vermsg, verify_bgin19_proof, Kzg10VerKey};
 
-use crate::{String, Vec};
+use crate::Vec;
 
 pub type Kzg10Comm<E> = ark_poly_commit::kzg10::Commitment<E>;
 pub type Kzg10Proof<E> = ark_poly_commit::kzg10::Proof<E>;
@@ -30,6 +29,4 @@ pub struct Proof<E: PairingEngine> {
 #[derive(Clone, Debug, Eq, PartialEq, CanonicalSerialize, CanonicalDeserialize)]
 pub struct VerMsg<E: PairingEngine> {
     f_r_shares: Vec<E::Fr>,
-    // p_r_value: E::Fr,
-    // b: E::Fr,
 }

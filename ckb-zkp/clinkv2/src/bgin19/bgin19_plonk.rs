@@ -5,7 +5,8 @@ use rand::Rng;
 use ark_std::test_rng;
 use std::time::{Duration, Instant};
 use crate::plonk_sumcheck::{
-    Proof, create_bgin19_proof, // gen_vermsg, verify_bgin19_proof,
+    Proof, create_bgin19_proof, 
+    gen_vermsg, verify_bgin19_proof,
 };
 use ark_std::UniformRand;
 use ark_std::rand::RngCore;
@@ -24,37 +25,13 @@ fn mul_local<F: Field>(xi: &F, xi_1: &F, yi: &F, yi_1: &F, alphai: &F) -> F {
     z1
 }
 
-// const SAMPLES: usize = 100;
-
-// pub fn prove_mul<E: PairingEngine, R: Rng> (
-//     inputs:Vec<Vec<E::Fr>>,
-//     M: usize,
-//     L: usize,
-//     thetas: &Vec<E::Fr>,
-//     betas: &Vec<E::Fr>,
-//     rng: &mut R,
-// ) -> (Proof<E>, Proof<E>, Vec<> {
-//     let rng = &mut thread_rng();
-
-//     println!("Creating proof...");
-    
-// }
-
-
-// pub fn verify_mul<E: PairingEngine> (
-//     proof: Proof<E>,
-//     n: usize,
-// ) -> bool {
-//     // Verifier
-// }
-
 #[test]
 fn bgin19_mul_plonk() {
     use ark_serialize::*;
 
-    let m:usize = 10000;
-    let M: usize = 100;
-    let L: usize = 100;
+    let m:usize = 100;
+    let M: usize = 10;
+    let L: usize = 10;
     let rng = &mut test_rng();
 
     type KZG_Bls12_381 = KZG10<Bls12_381, DensePolynomial<Fr>>;
@@ -71,57 +48,31 @@ fn bgin19_mul_plonk() {
     ).collect::<Vec<_>>();
     inputs.push(zis);
 
-    // let mut inputsi_1: Vec<Vec<Fr>> = vec![];
-    // let zero = Fr::zero();
-    // let zeros = vec![zero; m];
-    // let alphai_1s:Vec<Fr> = (0..m).map(|_| Fr::rand(rng)).collect();
-    // let input_alphai_1s:Vec<Fr> = (0..m).map(|i| -alphai_1s[i]).collect();
-    // inputsi_1.push(xis);
-    // inputsi_1.push(zeros.clone());
-    // inputsi_1.push(yis);
-    // inputsi_1.push(zeros.clone());
-    // inputsi_1.push(input_alphai_1s);
-    // inputsi_1.push(zis.clone());
+    let inputsi_1: Vec<Vec<Vec<Fr>>> = (0..6).map(|_| (0..L).map(|_| (0..M).map(|_| Fr::rand(rng)).collect() ).collect()).collect();
+    let inputsi_2: Vec<Vec<Vec<Fr>>> = (0..6).map(|k| (0..L).map(|l| (0..M).map(|j| inputs[k][l][j] - inputsi_1[k][l][j] ).collect() ).collect()).collect();
 
-    // let mut inputsi_2: Vec<Vec<Fr>> = vec![];
-    // let alphai_2s:Vec<Fr> = (0..m).map(|i| zero - alphais[i] - alphai_1s[i]).collect();
-    // let input_alphai_2s:Vec<Fr> = (0..m).map(|i| -alphai_2s[i]).collect();
-    // inputsi_2.push(zeros.clone());
-    // inputsi_2.push(xi_1s);
-    // inputsi_2.push(zeros.clone());
-    // inputsi_2.push(yi_1s);
-    // inputsi_2.push(input_alphai_2s);
-    // inputsi_2.push(zeros);
-
-    // let thetas: Vec<Fr> = (0..L).map(|_| Fr::rand(rng)).collect();
-    // let betas: Vec<Fr> = (0..M).map(|_| Fr::rand(rng)).collect();
+    let r = Fr::rand(rng);
+    let z = Fr::rand(rng);
+    // let eta = Fr::rand(rng);
+    let eta = Fr::one();
 
     let prove_start = Instant::now();
-    let proof = create_bgin19_proof::<Bls12_381, _>(inputs, &kzg10_ck, L, M, rng);
+    let proof = create_bgin19_proof::<Bls12_381, _>(inputs, &kzg10_ck, eta, r, z, rng);
     let prove_time = prove_start.elapsed();
-    
-    let mut proof_bytes = vec![];
-    proof.serialize(&mut proof_bytes).unwrap();
-    println!("[PLONK] Proof length: {}", proof_bytes.len());
-
     println!("Proving time: {:?}", prove_time);
 
-    // // Two verifiers
+    let mut proof_bytes = vec![];
+    proof.serialize(&mut proof_bytes).unwrap();
 
-    // let (_, _, fi_1_polys) = create_bgin19_proof::<Bls12_381, _>(inputsi_1, M, L, &thetas, &betas, rng);
-    // let (_, _, fi_2_polys) = create_bgin19_proof::<Bls12_381, _>(inputsi_2, M, L, &thetas, &betas, rng);
-    
-    // let min = Fr::from((M+1).next_power_of_two() as u64);
-    // let mut r: Fr = Fr::rand(rng);
-    // while r <= min {
-    //     r = Fr::rand(rng);
-    // }
-    // let verify_start = Instant::now();
-    // let pi_1_vermsg = gen_vermsg(proofi_1, &fi_1_polys, &betas, r, M);
-    // let result = verify_bgin19_proof(pi_1_vermsg, proofi_2, &fi_2_polys, &betas, &thetas, r, M);
-    // let verify_time = verify_start.elapsed();
-    // assert!(result);
+    // Two verifiers
+    let verify_start = Instant::now();
+    let pi_1_vermsg = gen_vermsg(&inputsi_1, eta, r, z);
+    let result = verify_bgin19_proof(pi_1_vermsg, proof, &inputsi_2, kzg10_vk, eta, r, z);
+    let verify_time = verify_start.elapsed();
+    assert!(result);
+    println!("Verifying time: {:?}", verify_time);
 
-    // println!("Verifying time: {:?}", verify_time);
-    // print!("Proof verified")
+    println!("[PLONK] Proof length: {}", proof_bytes.len());
+
+    print!("Proof verified")
 }

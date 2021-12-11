@@ -7,8 +7,6 @@ use ark_std::{cfg_iter, cfg_iter_mut};
 use merlin::Transcript;
 use rand::Rng;
 
-// DEV
-//use std::time::{Duration, Instant};
 use ark_poly_commit::kzg10::KZG10;
 pub type Kzg10VerKey<E> = ark_poly_commit::kzg10::VerifierKey<E>;
 

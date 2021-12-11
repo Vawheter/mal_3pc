@@ -1,12 +1,9 @@
 use std::vec;
 
 use ark_ec::PairingEngine;
-use ark_ff::{FftField, Field, One, ToBytes, UniformRand, Zero};
+use ark_ff::{FftField, One, Zero};
 use ark_poly::polynomial::univariate::DensePolynomial;
 use ark_poly::{EvaluationDomain, GeneralEvaluationDomain, Polynomial, UVPolynomial};
-use ark_serialize::CanonicalSerialize;
-use ark_std::{cfg_iter, cfg_iter_mut};
-use rand::Rng;
 use ark_std::rand::RngCore;
 
 // DEV

@@ -1,18 +1,19 @@
+#![allow(non_snake_case)]
+
 use ark_ec::PairingEngine;
-use ark_ff::Field;
 use ark_serialize::*;
 
 pub mod prover;
 pub mod verifier;
 
 pub use prover::create_bgin19_proof;
-// pub use verifier::{gen_vermsg, verify_bgin19_proof};
+pub use verifier::{gen_vermsg, verify_bgin19_proof};
 
 pub type Kzg10Comm<E> = ark_poly_commit::kzg10::Commitment<E>;
 pub type Kzg10Proof<E> = ark_poly_commit::kzg10::Proof<E>;
 pub type Kzg10ComKey<'a, E> = ark_poly_commit::kzg10::Powers<'a, E>;
 
-use crate::{String, Vec};
+use crate::Vec;
 
 /// The proof in FLPCP.
 #[derive(Clone, Debug, Eq, PartialEq, CanonicalSerialize, CanonicalDeserialize)]
@@ -26,5 +27,5 @@ pub struct Proof<E: PairingEngine> {
 /// The verification message in FLPCP.
 #[derive(Clone, Debug, Eq, PartialEq, CanonicalSerialize, CanonicalDeserialize)]
 pub struct VerMsg<E: PairingEngine> {
-    p_z_shares: Vec<E::Fr>,
+    F_z_shares: Vec<E::Fr>,
 }

@@ -1,82 +1,117 @@
-// use ark_ec::PairingEngine;
-// use ark_ff::{Field, One, ToBytes, UniformRand, Zero};
-// use ark_poly::polynomial::univariate::DensePolynomial;
-// use ark_poly::{EvaluationDomain, GeneralEvaluationDomain, Polynomial, UVPolynomial};
-// use ark_std::{cfg_iter, cfg_iter_mut};
-// use merlin::Transcript;
-// use rand::Rng;
+#![allow(non_snake_case)]
 
-// // DEV
-// //use std::time::{Duration, Instant};
+use ark_ec::PairingEngine;
+use ark_ff::One;
+use ark_poly::polynomial::univariate::DensePolynomial;
+use ark_poly::{EvaluationDomain, GeneralEvaluationDomain};
 
-// #[cfg(feature = "parallel")]
-// use rayon::prelude::*;
+use ark_poly_commit::kzg10::KZG10;
+pub type Kzg10VerKey<E> = ark_poly_commit::kzg10::VerifierKey<E>;
+use crate::batch_kzg10::batch_check;
 
-// use crate::flpcp::{Proof, VerMsg};
+#[cfg(feature = "parallel")]
+use rayon::prelude::*;
 
-// pub fn gen_vermsg<E: PairingEngine> (
-//     proof: Proof<E>,
-//     f_polys: &Vec<DensePolynomial<E::Fr>>,
-//     betas: &Vec<E::Fr>,
-//     r: E::Fr,
-//     M: usize,
-// ) -> VerMsg<E> {
-//     // let L6 = proof.ws.len();
-//     let f_r_shares = f_polys.iter().map(|f| f.evaluate(&r)).collect();
-//     let p_poly = DensePolynomial::from_coefficients_vec(proof.p_coeffs);
-//     assert!(r >= E::Fr::from(p_poly.len() as u64));
-//     println!("r: {:?}", r);
-//     let p_r_value = p_poly.evaluate(&r);
-//     let mut b = E::Fr::zero();
-//     // for i in 1..M+1 {
-//     //     let p_poly_i = p_poly.evaluate(&E::Fr::from(i as u32));
-//     //     // println!("p_poly_i: {:?}", p_poly_i);
-//     //     b += betas[i-1]*p_poly_i;
-//     // }
-//     let domain: GeneralEvaluationDomain<E::Fr> =
-//         EvaluationDomain::<E::Fr>::new(2*(M+1)).unwrap(); 
-//     let p_ploy_evals = p_poly.evaluate_over_domain_by_ref(domain);
-//     // println!("p_ploy_evals_over_domain: {:?}", p_ploy_evals);
-//     for i in 0..p_ploy_evals.evals.len() {
-//         b += p_ploy_evals.evals[i];
-//     }
-//     VerMsg {
-//         f_r_shares,
-//         p_r_value,
-//         b,
-//     }
-// }
+use crate::plonk_sumcheck::{Proof, VerMsg};
 
-// pub fn verify_bgin19_proof<E: PairingEngine>(
-//     p_vermsg: VerMsg<E>,
-//     proof: Proof<E>,
-//     f_polys: &Vec<DensePolynomial<E::Fr>>,
-//     betas: &Vec<E::Fr>,
-//     thetas: &Vec<E::Fr>,
-//     r: E::Fr,
-//     M: usize,
-// ) -> bool {
-//     let L = f_polys.len() / 6; 
-//     println!("L: {}", L); 
-//     let my_vermsg = gen_vermsg(proof, &f_polys, betas, r, M);
-//     // b = 0
-//     assert_eq!(my_vermsg.b + p_vermsg.b, E::Fr::zero());
+pub fn gen_vermsg<E: PairingEngine> (
+    inputs: &Vec<Vec<Vec<E::Fr>>>,
+    eta: E::Fr,
+    r: E::Fr,
+    z: E::Fr,
+) -> VerMsg<E> {
+    let L = inputs[0].len();
+    let M = inputs[0][0].len();
 
-//     let mut f_r_values:Vec<E::Fr> = vec![];
-//     cfg_iter!(my_vermsg.f_r_shares)
-//         .zip(&p_vermsg.f_r_shares)
-//         .for_each(|(f_r_share1, f_r_share2)| f_r_values.push(*f_r_share1 + f_r_share2));
-//     let mut g_output_r = E::Fr::zero();
-//     for i in 0..L {
-//         // let id = 6 * i;
-//         let c_output_r = f_r_values[i]*f_r_values[i+2*L] 
-//                     + f_r_values[i]*f_r_values[i+3*L] 
-//                     + f_r_values[i]*f_r_values[i+2*L] 
-//                     + f_r_values[i] - f_r_values[i+5*L];        
-//         g_output_r +=  c_output_r * thetas[i];
-//     }
-//     println!("my_vermsg.p_r_value: {:?}", my_vermsg.p_r_value);
-//     println!("p_vermsg.p_r_value: {:?}", p_vermsg.p_r_value);
-//     assert_eq!(my_vermsg.p_r_value + p_vermsg.p_r_value, g_output_r);
-//     true
-// }
+    // Compute shares of p(z)
+    let domain_M: GeneralEvaluationDomain<E::Fr> =
+        EvaluationDomain::<E::Fr>::new(M).unwrap();
+
+    let domain_L: GeneralEvaluationDomain<E::Fr> =
+        EvaluationDomain::<E::Fr>::new(L).unwrap();
+
+    let lag_r_M = domain_M.evaluate_all_lagrange_coefficients(r);
+    let lag_z_L = domain_L.evaluate_all_lagrange_coefficients(z);
+
+    let mut eta_power = E::Fr::one();
+    let mut eta_powers = vec![];
+    for _ in 0..M {
+        eta_powers.push(eta_power);
+        eta_power *= eta;
+    }
+
+    let mut f_r_shares = vec![];
+    
+    for k in 0..6 {
+        if k == 2 || k == 3 {
+            let fk_r_shares = (0..L).map(|l|
+                (0..M).map(|j|
+                    inputs[k][l][j] * lag_r_M[j]
+                ).sum()
+            ).collect::<Vec<E::Fr>>();
+            f_r_shares.push(fk_r_shares);
+        } else {
+            let fk_r_shares = (0..L).map(|l|
+                (0..M).map(|j|
+                    eta_powers[j] * inputs[k][l][j] * lag_r_M[j]
+                ).sum()
+            ).collect::<Vec<E::Fr>>();
+            f_r_shares.push(fk_r_shares);
+        }
+    }
+
+    let F_z_shares = (0..6).map(|k|
+        (0..L).map(|l|
+            f_r_shares[k][l] * lag_z_L[l]
+        ).sum()
+    ).collect::<Vec<_>>();
+
+    VerMsg {
+        F_z_shares,
+    }
+}
+
+pub fn verify_bgin19_proof<E: PairingEngine>(
+    p_vermsg: VerMsg<E>,
+    proof: Proof<E>,
+    inputs: &Vec<Vec<Vec<E::Fr>>>,
+    kzg10_vk: Kzg10VerKey<E>,
+    eta: E::Fr,
+    r: E::Fr,
+    z: E::Fr,
+) -> bool {
+    let L = inputs[0].len();
+    let M = inputs[0][0].len();
+
+    // Proof Structure:
+    //     poly_comms, // q(x), U(x), Q(x)
+    //     open_values, // q(r), U(gz), U(z), Q(z)
+    //     open_proofs, // q(r), U(gz), batch(U(z), Q(z))
+    //     open_challenge 
+
+    // Check poly openings: q(r)
+    assert!(KZG10::<E, DensePolynomial<E::Fr>>::check(&kzg10_vk, &proof.poly_comms[0], r, proof.open_values[0], &proof.open_proofs[0]).unwrap());
+    // Check poly openings: U(gz)
+    let domain_L: GeneralEvaluationDomain<E::Fr> =
+        EvaluationDomain::<E::Fr>::new(L).unwrap();
+    let gz = z * domain_L.group_gen();
+    assert!(KZG10::<E, DensePolynomial<E::Fr>>::check(&kzg10_vk, &proof.poly_comms[1], gz, proof.open_values[1], &proof.open_proofs[1]).unwrap());
+    // Check poly openings: Q(z), U(z)
+    assert!(batch_check(&kzg10_vk, &proof.poly_comms[1..], z, &proof.open_values[2..], &proof.open_proofs[2], proof.open_challenge).unwrap());
+
+    let my_vermsg: VerMsg<E> = gen_vermsg(inputs, eta, r, z);
+    // Reconstruct F(z)
+    let F_z_values = (0..6).map(|k|
+        my_vermsg.F_z_shares[k] + p_vermsg.F_z_shares[k]
+    ).collect::<Vec<_>>();
+    let domain_M: GeneralEvaluationDomain<E::Fr> =
+        EvaluationDomain::<E::Fr>::new(M).unwrap();
+    let v = proof.open_values[0] * domain_M.evaluate_vanishing_polynomial(r) * domain_L.size_inv();
+    let p_z_value = F_z_values[0] * (F_z_values[2] + F_z_values[3]) + F_z_values[1] * F_z_values[2] + F_z_values[4] - F_z_values[5] - v;
+
+    // Check U(gz) - U(z) = p(z) + Q(z)T(z)
+    let T_z_value = domain_L.evaluate_vanishing_polynomial(z);
+    assert_eq!(proof.open_values[1] - proof.open_values[2], p_z_value + proof.open_values[3] * T_z_value);
+    
+    true
+}

@@ -30,7 +30,7 @@ fn mul_local<F: Field>(xi: &F, xi_1: &F, yi: &F, yi_1: &F, alphai: &F) -> F {
 fn bgin19_mul_flpcp_original() {
     use ark_serialize::*;
 
-    let m:usize = 100000;
+    let m:usize = 1000000;
     let M: usize = 1000;
     let L: usize = 1000;
     let rng = &mut test_rng();
@@ -45,7 +45,6 @@ fn bgin19_mul_flpcp_original() {
 
     let inputsi_1: Vec<Vec<Vec<Fr>>> = (0..6).map(|_| (0..L).map(|_| (0..M).map(|_| Fr::rand(rng)).collect() ).collect()).collect();
     let inputsi_2: Vec<Vec<Vec<Fr>>> = (0..6).map(|k| (0..L).map(|l| (0..M).map(|j| inputs[k][l][j] - inputsi_1[k][l][j] ).collect() ).collect()).collect();
-
     
     let domain: GeneralEvaluationDomain<Fr> =
         EvaluationDomain::<Fr>::new(M).unwrap();
