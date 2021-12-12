@@ -155,6 +155,7 @@ pub fn create_bgin19_proof<E: PairingEngine, R: RngCore>(
 
     let mut p_values = vec![];
     for l in 0..L {
+        // IMPORTANT: the two polys perform fft on a larger domain of a larger domain which handles their product poly
         p_values.push(F_points[0][l] * (F_points[2][l] + F_points[3][l]) + F_points[1][l] * F_points[2][l] + F_points[4][l] - F_points[5][l] - v);
     }
     for _ in L..domain_L_size {

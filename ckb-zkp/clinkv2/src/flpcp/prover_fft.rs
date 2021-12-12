@@ -1,13 +1,12 @@
 #![allow(non_snake_case)]
 
+use std::vec;
+
 use ark_ec::PairingEngine;
 use ark_ff::{One, UniformRand, Zero};
 use ark_poly::polynomial::univariate::DensePolynomial;
 use ark_poly::{EvaluationDomain, GeneralEvaluationDomain, UVPolynomial};
 use ark_std::rand::RngCore;
-
-// DEV
-//use std::time::{Duration, Instant};
 
 #[cfg(feature = "parallel")]
 use rayon::prelude::*;
@@ -26,6 +25,7 @@ pub fn create_bgin19_proof<E: PairingEngine, R: RngCore>(
     let L = inputs[0].len();
     let M = inputs[0][0].len();
     
+    let zero = E::Fr::zero();
     let one = E::Fr::one();
 
     let domain: GeneralEvaluationDomain<E::Fr> =
@@ -52,23 +52,38 @@ pub fn create_bgin19_proof<E: PairingEngine, R: RngCore>(
         f_polys.push(fk_polys);
     }
    
-    // Compute p(x) polynomial
-    // p(x) = theta1*(f1(x)*f3(x)+f1(x)*f4(x)+f2(x)*f3(x)+f5(x)-f6(x)) + ... 
+    // Compute p(x) polynomial, p(x) = theta1*(f1(x)*f3(x)+f1(x)*f4(x)+f2(x)*f3(x)+f5(x)-f6(x)) + ... 
+
+    // let mut theta_power = one;
+    // let mut p_poly = DensePolynomial::<E::Fr>::zero();
+    // for l in 0..L {
+    //     let mut c_poly = &f_polys[0][l] * &(&f_polys[2][l] + &f_polys[3][l]) + &f_polys[1][l] * &f_polys[2][l];
+    //     c_poly += &f_polys[4][l];
+    //     c_poly -= &f_polys[5][l];
+    //     p_poly += (theta_power, &c_poly);
+    //     theta_power *= theta;
+    // }
+
+    // Optimization
+    let domain_2M: GeneralEvaluationDomain<E::Fr> =
+        EvaluationDomain::<E::Fr>::new(2 * M - 1).unwrap();
+    let domain_2M_size = domain_2M.size();
+    let mut p_values = vec![zero; domain_2M_size];
     let mut theta_power = one;
-    let mut p_poly = DensePolynomial::<E::Fr>::zero();
     for l in 0..L {
-        let mut c_poly = &f_polys[0][l] * &(&f_polys[2][l] + &f_polys[3][l]) + &f_polys[1][l] * &f_polys[2][l];
-        c_poly += &f_polys[4][l];
-        c_poly -= &f_polys[5][l];
-        p_poly += (theta_power, &c_poly);
+        let fl_2M_values = (0..6).map(|k| 
+            f_polys[k][l].evaluate_over_domain_by_ref(domain_2M).evals
+        ).collect::<Vec<_>>();
+        for j in 0..domain_2M_size {
+            p_values[j] += theta_power * (fl_2M_values[0][j] * (fl_2M_values[2][j] + fl_2M_values[3][j]) + fl_2M_values[1][j] * fl_2M_values[2][j] + fl_2M_values[4][j] - fl_2M_values[5][j])
+        }
         theta_power *= theta;
     }
-    // should be degree 2M , 2*(domain_size-1)+1 after padding
-    let p_len = p_poly.coeffs.len();
-    assert_eq!(p_len, 2 * domain_size - 1);
+    let p_coeffs = domain_2M.ifft(&p_values);
 
-    let p_coeffs_share1: Vec<E::Fr> = (0..p_len).map(|_| E::Fr::rand(rng)).collect();
-    let p_coeffs_share2: Vec<E::Fr> = (0..p_len).map(|i| p_poly.coeffs[i] - p_coeffs_share1[i]).collect();
+    // p(x) should be degree 2M , 2*(domain_size-1)+1 after padding
+    let p_coeffs_share1: Vec<E::Fr> = (0..domain_2M_size).map(|_| E::Fr::rand(rng)).collect();
+    let p_coeffs_share2: Vec<E::Fr> = (0..domain_2M_size).map(|i| p_coeffs[i] - p_coeffs_share1[i]).collect();
 
     let proof1 = Proof {
         p_coeffs_shares: p_coeffs_share1,
