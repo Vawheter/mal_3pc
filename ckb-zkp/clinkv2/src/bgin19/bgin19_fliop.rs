@@ -67,7 +67,7 @@ fn bgin19_mul_fliop() {
     // // Two verifiers
     let verify_start = Instant::now();
     let pi_1_vermsg = gen_vermsg(&proofi_1, &inputsi_1, gamma, theta, &wsi_1, &rs);
-    let result = verify_bgin19_proof(pi_1_vermsg, &proofi_2, &inputsi_2, gamma, theta, &wsi_2, &rs);
+    let result = verify_bgin19_proof(&pi_1_vermsg, &proofi_2, &inputsi_2, gamma, theta, &wsi_2, &rs);
     let verify_time = verify_start.elapsed();
     assert!(result);
     println!("Verifying time: {:?}", verify_time);
@@ -76,13 +76,15 @@ fn bgin19_mul_fliop() {
     proofi_1.serialize(&mut proofi_1_bytes).unwrap();
     let mut proofi_2_bytes = vec![];
     proofi_2.serialize(&mut proofi_2_bytes).unwrap();
+    let mut pi_1_vermsg_bytes = vec![];
+    pi_1_vermsg.serialize(&mut pi_1_vermsg_bytes).unwrap();
     // let mut rands_bytes = vec![];
     // let mut rands = vec![];
     // rands.push(rs);
     // rands.push(theta);
     // rands.push(gamma);
     // rands.serialize(&mut rands_bytes).unwrap();
-    println!("[FLIOP] Proof length: {}", proofi_1_bytes.len() + proofi_2_bytes.len());
+    println!("[FLIOP] Proof length: {}", proofi_1_bytes.len() + proofi_2_bytes.len() + pi_1_vermsg_bytes.len());
 
     print!("Proof verified")
 }

@@ -3,6 +3,7 @@ use ark_ff::{Field, One, Zero};
 use ark_ec::PairingEngine;
 use rand::Rng;
 use ark_std::test_rng;
+use std::cmp::max_by;
 use std::time::{Duration, Instant};
 use crate::plonk_sumcheck::{
     Proof, create_bgin19_proof, 
@@ -29,14 +30,14 @@ fn mul_local<F: Field>(xi: &F, xi_1: &F, yi: &F, yi_1: &F, alphai: &F) -> F {
 fn bgin19_mul_plonk() {
     use ark_serialize::*;
 
-    let m:usize = 100;
-    let M: usize = 10;
-    let L: usize = 10;
+    let m:usize = 1000000;
+    let M: usize = 1000;
+    let L: usize = 1000;
     let rng = &mut test_rng();
 
     type KZG_Bls12_381 = KZG10<Bls12_381, DensePolynomial<Fr>>;
 
-    let degree =  (2*L).next_power_of_two();
+    let degree =  (2 * max_by(M, L, |x: &usize, y: &usize| x.cmp(y))).next_power_of_two();
     let kzg10_pp = KZG_Bls12_381::setup(degree, false, rng).unwrap();
     let (kzg10_ck, kzg10_vk) = KZG_Bls12_381::trim(&kzg10_pp, degree).unwrap();
 

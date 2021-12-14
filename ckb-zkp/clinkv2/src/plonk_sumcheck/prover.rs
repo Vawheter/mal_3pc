@@ -141,9 +141,23 @@ pub fn create_bgin19_proof<E: PairingEngine, R: RngCore>(
     // println!("F_polys[0].degree(): {:?}", F_polys[0].degree());
 
     // Compute p(x), 2 poly mul, 6LlogL
-    let mut p_poly = &F_polys[0] * &(&F_polys[2] + &F_polys[3]) + &F_polys[1] * &F_polys[2];
-    p_poly += &F_polys[4];
-    p_poly -= &F_polys[5];
+    let domain_2L: GeneralEvaluationDomain<E::Fr> =
+        EvaluationDomain::<E::Fr>::new(2 * L - 1).unwrap();
+    let domain_2L_size = domain_2L.size();
+    let mut p_2L_values = vec![zero; domain_2L_size];
+    let F_2L_values = (0..6).map(|k|
+        F_polys[k].evaluate_over_domain_by_ref(domain_2L).evals
+    ).collect::<Vec<_>>();
+
+    for l in 0..domain_2L_size {
+        p_2L_values[l] += F_2L_values[0][l] * (F_2L_values[2][l] + F_2L_values[3][l]) + F_2L_values[1][l] * F_2L_values[2][l] + F_2L_values[4][l] - F_2L_values[5][l]
+    }
+    let p_coeffs = domain_2L.ifft(&p_2L_values);
+    let mut p_poly = DensePolynomial::from_coefficients_vec(p_coeffs);
+
+    // let mut p_poly = &F_polys[0] * &(&F_polys[2] + &F_polys[3]) + &F_polys[1] * &F_polys[2];
+    // p_poly += &F_polys[4];
+    // p_poly -= &F_polys[5];
 
     // Check p(x) correctness: OK
     // assert_eq!(p_poly.evaluate(&z), F_polys[0].evaluate(&z) * (F_polys[2].evaluate(&z) + F_polys[3].evaluate(&z)) + F_polys[1].evaluate(&z) * F_polys[2].evaluate(&z) + F_polys[4].evaluate(&z) - F_polys[5].evaluate(&z));

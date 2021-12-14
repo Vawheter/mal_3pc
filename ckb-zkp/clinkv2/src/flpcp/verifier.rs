@@ -74,7 +74,7 @@ pub fn gen_vermsg<E: PairingEngine> (
 }
 
 pub fn verify_bgin19_proof<E: PairingEngine>(
-    p_vermsg: VerMsg<E>,
+    p_vermsg: &VerMsg<E>,
     proof: Proof<E>,
     inputs: &Vec<Vec<Vec<E::Fr>>>,
     beta: E::Fr,

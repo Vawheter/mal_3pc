@@ -15,7 +15,7 @@ pub type Kzg10ComKey<'a, E> = ark_poly_commit::kzg10::Powers<'a, E>;
 
 use crate::Vec;
 
-/// The proof in FLPCP.
+/// The proof in PLONK Sumcheck.
 #[derive(Clone, Debug, Eq, PartialEq, CanonicalSerialize, CanonicalDeserialize)]
 pub struct Proof<E: PairingEngine> {
     poly_comms: Vec<Kzg10Comm<E>>,

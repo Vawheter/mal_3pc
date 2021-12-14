@@ -74,12 +74,15 @@ fn bgin19_mul_flpcp_original() {
     // Two verifiers
     let verify_start = Instant::now();
     let pi_1_vermsg = gen_vermsg(proofi_1, &inputsi_1, beta, &wsi_1, r);
-    let result = verify_bgin19_proof(pi_1_vermsg, proofi_2, &inputsi_2, beta, theta, &wsi_2, r);
+    let result = verify_bgin19_proof(&pi_1_vermsg, proofi_2, &inputsi_2, beta, theta, &wsi_2, r);
     let verify_time = verify_start.elapsed();
     assert!(result);
     println!("Verifying time: {:?}", verify_time);
 
-    println!("[FLPCP] Proof length: {}", proofi_1_bytes.len() + proofi_2_bytes.len());
+    let mut pi_1_vermsg_bytes = vec![];
+    pi_1_vermsg.serialize(&mut pi_1_vermsg_bytes).unwrap();
+
+    println!("[FLPCP] Proof length: {}", proofi_1_bytes.len() + proofi_2_bytes.len() + pi_1_vermsg_bytes.len());
 
     print!("Proof verified")
 }

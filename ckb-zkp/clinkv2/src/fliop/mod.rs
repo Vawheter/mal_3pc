@@ -9,7 +9,7 @@ pub use verifier::{gen_vermsg, verify_bgin19_proof};
 
 use crate::Vec;
 
-/// The proof in FLPCP.
+/// The proof in FLIOP.
 #[derive(Clone, Debug, Eq, PartialEq, CanonicalSerialize, CanonicalDeserialize)]
 pub struct Proof<E: PairingEngine> {
     q_shares: Vec<Vec<E::Fr>>,
