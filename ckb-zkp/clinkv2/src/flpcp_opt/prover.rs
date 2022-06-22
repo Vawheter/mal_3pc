@@ -1,13 +1,10 @@
 use std::vec;
 
 use ark_ec::PairingEngine;
-use ark_ff::{FftField, One, Zero};
+use ark_ff::FftField;
 use ark_poly::polynomial::univariate::DensePolynomial;
 use ark_poly::{EvaluationDomain, GeneralEvaluationDomain, Polynomial, UVPolynomial};
 use ark_std::rand::RngCore;
-
-// DEV
-//use std::time::{Duration, Instant};
 
 #[cfg(feature = "parallel")]
 use rayon::prelude::*;
@@ -28,9 +25,6 @@ pub fn create_bgin19_proof<E: PairingEngine, R: RngCore>(
     
     // inputs[0], ..., inputs[5]
     let m = inputs[0].len();
-
-    let one = E::Fr::one();
-    let zero = E::Fr::zero();
 
     // Check inputs, no problem
     // for j in 0..m {

@@ -1,11 +1,9 @@
 use std::vec;
 use ark_ec::PairingEngine;
-use ark_ff::{Field, One, ToBytes, UniformRand, Zero};
+use ark_ff::Zero;
 use ark_poly::polynomial::univariate::DensePolynomial;
-use ark_poly::{EvaluationDomain, GeneralEvaluationDomain, Polynomial, UVPolynomial};
-use ark_std::{cfg_iter, cfg_iter_mut};
-use merlin::Transcript;
-use rand::Rng;
+use ark_poly::{EvaluationDomain, GeneralEvaluationDomain, Polynomial};
+use ark_std::cfg_iter;
 
 use ark_poly_commit::kzg10::KZG10;
 pub type Kzg10VerKey<E> = ark_poly_commit::kzg10::VerifierKey<E>;
@@ -51,7 +49,7 @@ pub fn verify_bgin19_proof<E: PairingEngine>(
 
     let domain: GeneralEvaluationDomain<E::Fr> =
         EvaluationDomain::<E::Fr>::new(m+1).unwrap();
-    let vanishing_value = domain.vanishing_polynomial().evaluate(&r);
+    let _vanishing_value = domain.vanishing_polynomial().evaluate(&r);
     
 
     let mut f_r_values:Vec<E::Fr> = vec![];
@@ -59,7 +57,7 @@ pub fn verify_bgin19_proof<E: PairingEngine>(
         .zip(&p_vermsg.f_r_shares)
         .for_each(|(f_r_share1, f_r_share2)| f_r_values.push(*f_r_share1 + f_r_share2));
     
-    let p_r_value = f_r_values[0]*f_r_values[2] + f_r_values[0]*f_r_values[3] + f_r_values[1]*f_r_values[2] + f_r_values[4] - f_r_values[5];
+    let _p_r_value = f_r_values[0]*f_r_values[2] + f_r_values[0]*f_r_values[3] + f_r_values[1]*f_r_values[2] + f_r_values[4] - f_r_values[5];
     // assert_eq!(p_r_value, proof.q_r_value * vanishing_value);
     true
 }

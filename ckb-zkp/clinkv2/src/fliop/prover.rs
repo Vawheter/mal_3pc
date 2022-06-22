@@ -3,8 +3,7 @@
 use std::vec;
 use ark_ec::PairingEngine;
 use ark_ff::{UniformRand, Zero, One};
-use ark_poly::polynomial::univariate::DensePolynomial;
-use ark_poly::{EvaluationDomain, GeneralEvaluationDomain, Polynomial, UVPolynomial};
+use ark_poly::{EvaluationDomain, GeneralEvaluationDomain};
 use ark_std::rand::RngCore;
 
 #[cfg(feature = "parallel")]
@@ -31,7 +30,7 @@ pub fn create_bgin19_proof<E: PairingEngine, R: RngCore>(
     // f(x) degree: 1, should work over domain 2
     let domain2: GeneralEvaluationDomain<E::Fr> =
         EvaluationDomain::<E::Fr>::new(2).unwrap();
-    let g_domain2 = domain2.group_gen();
+    // let g_domain2 = domain2.group_gen();
 
     // q(x) degree: 2, should work over domain 4, need 3 points to reconstruct
     let domain4: GeneralEvaluationDomain<E::Fr> =

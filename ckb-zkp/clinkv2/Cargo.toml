@@ -9,9 +9,10 @@ license = "MIT/Apache-2.0"
 edition = "2018"
 
 [features]
-default = ["std"]
+default = ["parallel"]
 std = ["zkp-curve/std", "ark-ff/std", "ark-std/std"]
 parallel = ["std", "rayon", "zkp-curve/parallel", "ark-ff/parallel", "ark-std/parallel"]
+#parallel = ["rayon", "zkp-curve/parallel", "ark-ff/parallel", "ark-std/parallel"]
 
 [dependencies]
 smallvec = "1.6"

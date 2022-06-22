@@ -30,7 +30,9 @@ fn mul_local<F: Field>(xi: &F, xi_1: &F, yi: &F, yi_1: &F, alphai: &F) -> F {
 fn bgin19_mul_flpcp_original() {
     use ark_serialize::*;
 
-    let m:usize = 1000000;
+    // 2^20 = 1048576
+    // 2^23 = 8388608
+    let _m:usize = 1000000;
     let M: usize = 1000;
     let L: usize = 1000;
     let rng = &mut test_rng();

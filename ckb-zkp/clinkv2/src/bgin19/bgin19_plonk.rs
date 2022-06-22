@@ -27,19 +27,26 @@ fn mul_local<F: Field>(xi: &F, xi_1: &F, yi: &F, yi_1: &F, alphai: &F) -> F {
 }
 
 #[test]
-fn bgin19_mul_plonk() {
+#[cfg(feature = "parallel")]
+fn bgin19_mul_plonk0() {
     use ark_serialize::*;
 
-    let m:usize = 1000000;
+    let _m:usize = 1000000;
     let M: usize = 1000;
     let L: usize = 1000;
+    // let m:usize = 10000000;
+    // let M: usize = 3162;
+    // let L: usize = 3163;
     let rng = &mut test_rng();
 
     type KZG_Bls12_381 = KZG10<Bls12_381, DensePolynomial<Fr>>;
 
+    let setup_start = Instant::now();
     let degree =  (2 * max_by(M, L, |x: &usize, y: &usize| x.cmp(y))).next_power_of_two();
     let kzg10_pp = KZG_Bls12_381::setup(degree, false, rng).unwrap();
     let (kzg10_ck, kzg10_vk) = KZG_Bls12_381::trim(&kzg10_pp, degree).unwrap();
+    let setup_time = setup_start.elapsed();
+    println!("Setup time: {:?}", setup_time);
 
     let mut inputs: Vec<Vec<Vec<Fr>>> = (0..5).map(|_| (0..L).map(|_| (0..M).map(|_| Fr::rand(rng)).collect() ).collect()).collect();
     let zis = (0..L).map(|l| 

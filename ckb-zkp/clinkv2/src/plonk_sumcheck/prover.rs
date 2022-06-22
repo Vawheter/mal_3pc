@@ -140,7 +140,7 @@ pub fn create_bgin19_proof<E: PairingEngine, R: RngCore>(
     }
     // println!("F_polys[0].degree(): {:?}", F_polys[0].degree());
 
-    // Compute p(x), 2 poly mul, 6LlogL
+    // Compute P(x), 2 poly mul, 6LlogL
     let domain_2L: GeneralEvaluationDomain<E::Fr> =
         EvaluationDomain::<E::Fr>::new(2 * L - 1).unwrap();
     let domain_2L_size = domain_2L.size();
